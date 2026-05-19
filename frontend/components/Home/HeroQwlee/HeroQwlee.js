@@ -12,11 +12,14 @@
 // file in `frontend/public/hero.mp4` and add a <video> behind everything.
 // Don't hotlink third-party CDN videos — they're copyrighted assets.
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { GoVerified } from "react-icons/go";
 import { HiOutlineLockClosed, HiOutlineLightningBolt } from "react-icons/hi";
 import SearchSuggestions from "@/components/Search/SearchSuggestions";
+import { base } from "@/lib/constant";
+import trackSearch from "@/utils/trackSearch";
 
 const ROTATING_SUGGESTIONS = [
   "Next.js developer",
@@ -29,7 +32,7 @@ const ROTATING_SUGGESTIONS = [
   "Brand identity",
 ];
 
-const TRENDING = [
+const FALLBACK_TRENDING = [
   "Next.js",
   "UI/UX",
   "React Native",
@@ -41,8 +44,30 @@ const TRENDING = [
 
 export default function HeroQwlee() {
   const router = useRouter();
+  const [trending, setTrending] = useState(FALLBACK_TRENDING);
+
+  // Pull live trending from the search log. Falls back to the seeded
+  // list when the endpoint is empty (fresh DB / no traffic yet) so the
+  // strip never renders blank.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${base}/v1/search/trending?days=7&limit=8`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (cancelled) return;
+        const live = (res?.data?.attributes?.results || [])
+          .map((r) => r.query)
+          .filter(Boolean);
+        if (live.length) setTrending(live.slice(0, 8));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function searchTerm(term) {
+    trackSearch(term, { route: "/gig" });
     router.push(`/gig?title=${encodeURIComponent(term)}`);
   }
 
@@ -95,7 +120,7 @@ export default function HeroQwlee() {
 
           <div className="mt-4 md:mt-5 flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
             <span className="text-xs md:text-sm text-gray-500">Trending:</span>
-            {TRENDING.map((t) => (
+            {trending.map((t) => (
               <button
                 key={t}
                 onClick={() => searchTerm(t)}

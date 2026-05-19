@@ -23,6 +23,11 @@ router.get(
 router.patch("/users/:userId/ban", auth("admin"), adminController.banUser);
 router.patch("/users/:userId/unban", auth("admin"), adminController.unbanUser);
 
+// Admin search logs — every marketplace query (anonymous + authed).
+const searchController = require("../../controllers/search.controller");
+router.get("/searches", auth("admin"), searchController.list);
+router.get("/search-stats", auth("admin"), searchController.adminStats);
+
 // Read-only access to platform conversations (DMs + order chats) for
 // moderation. No write endpoints — admins observe, they don't post.
 const adminChatsController = require("../../controllers/adminChats.controller");

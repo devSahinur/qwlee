@@ -21,3 +21,4 @@ module.exports.BannerImage = require('./banner.model');
 module.exports.Activity = require('./activity.model');
 module.exports.SupportTicket = require('./supportTicket.model');
 module.exports.SupportMessage = require('./supportMessage.model');
+module.exports.SearchLog = require('./searchLog.model');

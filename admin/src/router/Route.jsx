@@ -43,6 +43,7 @@ import UserDetail from "../dashboard/menu/UserDetail";
 import Support from "../dashboard/menu/Support";
 import Verifications from "../dashboard/menu/Verifications";
 import Conversations from "../dashboard/menu/Conversations";
+import SearchLogs from "../dashboard/menu/SearchLogs";
 
 export const router = createBrowserRouter([
   { path: "/", element: <Login />, errorElement: <ErrorPage /> },
@@ -92,6 +93,7 @@ export const router = createBrowserRouter([
       { path: "support", element: <Support /> },
       { path: "verifications", element: <Verifications /> },
       { path: "conversations", element: <Conversations /> },
+      { path: "searches", element: <SearchLogs /> },
     ],
   },
 ]);

@@ -23,6 +23,7 @@ import { useGetAllCategoryQuery } from "@/app/redux/features/getAllCategoryApi";
 import AllCard from "./AllCard";
 import AllCardTopFilters from "./AllCardTopFilters";
 import GigCardSkeleton from "./GigCardSkeleton";
+import trackSearch from "@/utils/trackSearch";
 
 const LIMIT = 12;
 
@@ -42,6 +43,7 @@ function GigContent() {
   useEffect(() => {
     setSearchInput(title);
     setCurrentPage(1);
+    if (title) trackSearch(title, { route: "/gig" });
   }, [title]);
 
   // Debounce the input → URL update. The URL is the source of truth.

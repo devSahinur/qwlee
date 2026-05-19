@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { IoSearch, IoTimeOutline, IoClose, IoTrendingUp } from "react-icons/io5";
 import { base } from "@/lib/constant";
 import Avatar from "@/components/common/Avatar";
+import trackSearch from "@/utils/trackSearch";
 
 const RECENTS_KEY = "qwlee:search:recents";
 const RECENT_LIMIT = 6;
@@ -150,6 +151,7 @@ export default function SearchSuggestions({
     pushRecent(t);
     setRecents(readRecents());
     setOpen(false);
+    trackSearch(t, { route: "/gig" });
     router.push(`/gig?title=${encodeURIComponent(t)}`);
   }
 

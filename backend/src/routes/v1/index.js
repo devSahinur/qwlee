@@ -20,6 +20,7 @@ const bannerImageRoute = require('./banner.routes')
 const activityRoute = require('./activity.routes')
 const supportRoute = require('./support.routes')
 const verificationRoute = require('./verification.routes')
+const searchRoute = require('./search.routes')
 
 const router = express.Router();
 
@@ -100,6 +101,10 @@ const defaultRoutes = [
   {
     path: "/verification",
     route: verificationRoute,
+  },
+  {
+    path: "/search",
+    route: searchRoute,
   }
 ];
 

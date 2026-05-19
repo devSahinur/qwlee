@@ -14,7 +14,7 @@ import { FaUsersLine } from "react-icons/fa6";
 import { MdCategory } from "react-icons/md";
 import { HiLogout } from "react-icons/hi";
 import { AiOutlineSafetyCertificate } from "react-icons/ai";
-import { TbLogs, TbReportAnalytics, TbShoppingBag } from "react-icons/tb";
+import { TbLogs, TbReportAnalytics, TbShoppingBag, TbSearch } from "react-icons/tb";
 import { CiSettings } from "react-icons/ci";
 import { PiHandWithdraw } from "react-icons/pi";
 import { BsSliders2, BsClipboardData } from "react-icons/bs";
@@ -38,6 +38,7 @@ const NAV = [
       { to: "/dashboard/orders", label: "Orders", icon: TbShoppingBag },
       { to: "/dashboard/gigs", label: "Gigs", icon: BsClipboardData },
       { to: "/dashboard/category", label: "Categories", icon: MdCategory },
+      { to: "/dashboard/searches", label: "Search logs", icon: TbSearch },
     ],
   },
   {

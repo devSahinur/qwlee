@@ -22,6 +22,7 @@ export const apiSlice = createApi({
     "supportTickets",
     "supportTicket",
     "verifications",
+    "searches",
    ],
   endpoints: (builder) => ({
 
@@ -466,6 +467,27 @@ unbanUser: builder.mutation({
   invalidatesTags: ["users"],
 }),
 
+// Search-log monitoring — paginated table + headline stats.
+getAdminSearches: builder.query({
+  query: (params = {}) => {
+    const qs = new URLSearchParams({ limit: 50, page: 1, ...params }).toString();
+    return {
+      url: `/admin/searches?${qs}`,
+      headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+    };
+  },
+  transformResponse: (res) => res?.data?.attributes,
+  providesTags: ["searches"],
+}),
+getSearchStats: builder.query({
+  query: () => ({
+    url: `/admin/search-stats`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+  providesTags: ["searches"],
+}),
+
  ///***********Notification api get */
 
  getNotification: builder.query({
@@ -651,5 +673,7 @@ updateProfielPicture: builder.mutation({
       useGetDirectChatMessagesQuery,
       useGetOrderChatsQuery,
       useGetOrderChatMessagesQuery,
+      useGetAdminSearchesQuery,
+      useGetSearchStatsQuery,
 
  } = apiSlice;
