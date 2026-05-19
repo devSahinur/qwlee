@@ -1,0 +1,12 @@
+.customModal {
+    /* background-color:
+    #493f3f
+    ; */
+    
+    /* background-color: rgb(110, 139, 218, 0.3); */
+    background-color: rgba(11, 11, 22, 0.7);
+    border: 1px #00BF63 solid; 
+    height: 500px;
+    width: 500px;
+  }
+   

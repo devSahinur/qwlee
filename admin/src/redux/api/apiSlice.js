@@ -1,0 +1,655 @@
+
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import url from '../../baseUrl';
+
+export const apiSlice = createApi({
+  reducerPath: 'api',
+  // Base URL is sourced from VITE_API_BASE_URL via baseUrl.js. The `/v1`
+  // suffix is the API version prefix exposed by the Qwlee backend.
+  baseQuery: fetchBaseQuery({ baseUrl: `${url}/v1` }),
+   tagTypes: [
+    "categories",
+    "blog",
+    "Image",
+    "info/privacy",
+    "info/terms",
+    "info/trust-safety",
+    "withdrawal/single?withdrawalId",
+    "withdrawal",
+    "users",
+    "orders",
+    "gigs",
+    "supportTickets",
+    "supportTicket",
+    "verifications",
+   ],
+  endpoints: (builder) => ({
+
+ ///////////Authentication page//////////// 
+
+forgotPassword: builder.mutation({
+  query: (email) => ({
+    url: "/auth/forgot-password",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: ` Bearer ${localStorage.getItem('token')}`
+    },
+    body: email
+  })
+}),
+
+emailVerify: builder.mutation({
+  query: ({otp, email}) => ({
+    url: "/auth/verify-email",
+    method: "POST",
+    headers: {
+         "Content-Type": "application/json",
+      authorization: ` Bearer ${localStorage.getItem('token')}`
+    },
+    body: {
+      oneTimeCode: otp,
+      email: email,
+    }
+  })
+}),
+
+resetPassword: builder.mutation({
+  query: ({email, password}) => ({
+    url: "/auth/reset-password",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+   authorization: ` Bearer ${localStorage.getItem('token')}`
+ },
+ body: { 
+  email,
+  password,
+}
+  })
+}), 
+changPassword: builder.mutation({
+  query: (values) => ({
+    url: '/auth/change-password',
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+    body: values, // Send the values directly, without wrapping in another object
+  }),
+}),
+
+
+ ///////////Total Status////////////
+ totalStatus:builder.query({
+  query: () => ({
+   url: "/admin/getTotalStatus",
+   method: "GET",
+   headers : {
+    "Content-Type": "application/json",
+    authorization: ` Bearer ${localStorage.getItem('token')}`
+   }
+  }) 
+ }),
+ /////////Income ratio , ////////////
+ getIncomeRatio: builder.query({
+  query: (year) => ({
+    url: `/admin/getIncomeRatio?year=${year}`,
+    method: "GET",
+    headers : {
+      "Content-Type": "application/json",
+      authorization: ` Bearer ${localStorage.getItem('token')}`
+     }
+  }) 
+}),
+
+////******|Earnings************ */
+getEarning: builder.query({
+  query: ({year, page}) => ({
+    url: `/admin/earnings?year=${year}&page=${page}`,
+    method:"GET",
+    headers:{
+      authorization: ` Bearer ${localStorage.getItem('token')}`
+    }
+  })
+}),
+
+///********UserRatio********* */
+getUserRatio:builder.query({
+  query: (month) => ({
+    url: `/admin/getUserRatio?month=${month}`,
+    method: "GET",
+    headers:{
+      authorization: ` Bearer ${localStorage.getItem('token')}`
+    }
+  })
+}),
+
+///*******Recent Users************ */
+getRecentUser:builder.query({
+  query: () => ({
+    url: '/admin/recentUsers',
+    method: "GET",
+    headers: {
+
+      authorization: ` Bearer ${localStorage.getItem('token')}`
+    }
+    
+ 
+  })
+}),
+
+
+    // Category api intigration >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>//////////
+
+    getCategories: builder.query({
+      // Match the marketplace navbar so the admin sees every seeded
+      // category in one view (no useless pagination when the list is
+      // tiny). transformResponse strips the envelope so consumers can
+      // read .results / .totalResults directly.
+      query: (page = 1) => `/categories?page=${page}&limit=50`,
+      providesTags: ["categories"],
+      transformResponse: (res) =>
+        res?.data?.attributes || res?.results || res || {},
+    }),
+
+    addCategory: builder.mutation({
+         query: (formData) => ({
+            url:'/categories',
+            method:"POST",
+            body: formData,
+            headers: {
+                authorization: ` Bearer ${localStorage.getItem('token')}`
+            }
+         }),
+         invalidatesTags: ["categories"]
+
+}), 
+
+    updateCategory: builder.mutation({
+      query: ( {id, formData} ) => ({ 
+        url: `/categories?categoryId=${id}`,
+        method: 'PATCH',
+        headers: {
+            authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body:  formData, 
+      }),
+      invalidatesTags:["categories"]
+    }), 
+
+    deleteCategories: builder.mutation({
+      query: (id) => ({ 
+        url: `/categories/${id}`,
+        headers: {
+            authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        method: 'DELETE',
+      }),
+      invalidatesTags:["categories"]
+    }),
+
+
+
+    //   Blogs data Intigration >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>/////
+    getBlogs: builder.query({
+        query: (page) => `/blog?page=${page}&limit=6`, 
+        providesTags: ["blog"]
+      }), 
+    addBlogs: builder.mutation({
+      query: (newBlogs) => ({
+        url:'/blog',
+        method:"POST",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: newBlogs,
+      }),
+      invalidatesTags:["blog"]
+    }),
+
+    deleteBlog: builder.mutation({
+      query: (id) => ({
+        url:`/blog/${id}`,
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        method: 'DELETE',
+      }),
+      invalidatesTags:['blog']
+    }),
+    updateBlog: builder.mutation({
+      query: ({_id, formData}) => ({
+        url: `/blog/${_id}`,
+        method: 'PATCH',
+        headers: {
+          authorization:`Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData,
+      }),
+      invalidatesTags:['blog']
+    }),
+
+
+
+      // Privacy data gettt >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>/////
+      getPrivacy: builder.query({
+        query: () => '/info/privacy',
+            providesTags: ['info/privacy'], 
+      }),
+
+    addPrivacy: builder.mutation({
+      query: (privacy) => ({
+        url: '/info/privacy',
+        method:'POST',
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: privacy,
+      }),
+      invalidatesTags: ["info/privacy"],
+    }),
+
+
+
+  //  Term & conditon data get >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>///////
+
+  getTermConditon: builder.query({
+    query: () => '/info/terms', 
+    providesTags: ["info/terms"]
+  }), 
+
+  addTermCondition: builder.mutation({
+    query: (privacy) => ({
+      url: '/info/terms',
+      method:'POST',
+      headers: {
+        authorization: `Bearer ${localStorage.getItem('token')}`
+      },
+      body: privacy,
+    }),
+    invalidatesTags: ["info/terms"],
+  }),
+
+// ********************trus&safty Api get >>>>>>>>>>>>>>>>>>>>>>>>>>>>******************/// 
+getTrustSafety: builder.query({
+  query: () => "/info/trust-safety",
+  providesTags: ['info/trust-safety']
+}),
+addTrustSafety: builder.mutation({
+  query: (trustSafery) => ({
+    url: '/info/trust-safety',
+    method:"POST",
+    headers: {
+      authorization:`Bearer ${localStorage.getItem('token')}`
+    },
+    body: trustSafery,
+  }),
+  invalidatesTags: ["info/trust-safety"]
+}),
+
+// BuyerList Api get****************************/////////
+getBuyerList: builder.query({
+ query: (params = {}) => {
+   const qs = new URLSearchParams({ role: "buyer", limit: 100, ...params }).toString();
+   return { url: `/users?${qs}`, headers: { authorization: `Bearer ${localStorage.getItem("token")}` } };
+ },
+ providesTags: ["users"],
+}),
+
+////**********FrelancerList Api get *************/////
+getFrelancerList: builder.query({
+  query: (params = {}) => {
+    const qs = new URLSearchParams({ role: "freelancer", limit: 100, ...params }).toString();
+    return { url: `/users?${qs}`, headers: { authorization: `Bearer ${localStorage.getItem("token")}` } };
+  },
+  providesTags: ["users"],
+}),
+
+// Admin orders + gigs list. Backend exposes full-platform views under
+// /admin/* so they're not scoped to the admin's own user the way the
+// regular /orders + /gig endpoints are.
+getAdminOrders: builder.query({
+  query: (params = {}) => {
+    const qs = new URLSearchParams({ limit: 100, ...params }).toString();
+    return { url: `/admin/orders?${qs}`, headers: { authorization: `Bearer ${localStorage.getItem("token")}` } };
+  },
+  providesTags: ["orders"],
+}),
+getAdminGigs: builder.query({
+  query: (params = {}) => {
+    const qs = new URLSearchParams({ limit: 100, ...params }).toString();
+    return { url: `/admin/gigs?${qs}`, headers: { authorization: `Bearer ${localStorage.getItem("token")}` } };
+  },
+  providesTags: ["gigs"],
+}),
+
+// Single-user activity feed (login history + routes + timeline). Used
+// by the admin user-monitor page.
+getUserActivity: builder.query({
+  query: ({ userId, limit = 100 } = {}) => ({
+    url: `/admin/user-activity/${userId}?limit=${limit}`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes || res,
+}),
+
+// Admin conversation moderation — read-only access to direct messages
+// and order chats across the platform.
+getDirectChats: builder.query({
+  query: ({ search = "" } = {}) => ({
+    url: `/admin/chats?search=${encodeURIComponent(search)}&limit=200`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+}),
+getDirectChatMessages: builder.query({
+  query: (chatId) => ({
+    url: `/admin/chats/${chatId}/messages`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+}),
+getOrderChats: builder.query({
+  query: ({ search = "" } = {}) => ({
+    url: `/admin/order-chats?search=${encodeURIComponent(search)}&limit=200`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+}),
+getOrderChatMessages: builder.query({
+  query: (orderId) => ({
+    url: `/admin/order-chats/${orderId}/messages`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+}),
+
+// Seller verification — admin review.
+getVerifications: builder.query({
+  query: ({ status = "pending" } = {}) => ({
+    url: `/verification?status=${status}&limit=200`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+  providesTags: ["verifications"],
+}),
+reviewVerification: builder.mutation({
+  query: ({ userId, action, reason }) => ({
+    url: `/verification/${userId}`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { action, reason },
+  }),
+  invalidatesTags: ["verifications", "users"],
+}),
+
+// Support tickets — admin view.
+getSupportTickets: builder.query({
+  query: ({ status } = {}) => {
+    const qs = new URLSearchParams();
+    if (status) qs.append("status", status);
+    qs.append("limit", 200);
+    return {
+      url: `/support/tickets?${qs.toString()}`,
+      headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+    };
+  },
+  transformResponse: (res) => res?.data?.attributes,
+  providesTags: ["supportTickets"],
+}),
+getSupportTicket: builder.query({
+  query: (ticketId) => ({
+    url: `/support/tickets/${ticketId}`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+  providesTags: (_r, _e, id) => [{ type: "supportTicket", id }],
+}),
+postSupportMessage: builder.mutation({
+  query: ({ ticketId, body }) => ({
+    url: `/support/tickets/${ticketId}/messages`,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { body },
+  }),
+  invalidatesTags: (_r, _e, arg) => [
+    { type: "supportTicket", id: arg.ticketId },
+    "supportTickets",
+  ],
+}),
+updateSupportStatus: builder.mutation({
+  query: ({ ticketId, status }) => ({
+    url: `/support/tickets/${ticketId}`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { status },
+  }),
+  invalidatesTags: (_r, _e, arg) => [
+    { type: "supportTicket", id: arg.ticketId },
+    "supportTickets",
+  ],
+}),
+
+// Ban / unban — both invalidate the users list so the row reflects
+// the new state immediately.
+banUser: builder.mutation({
+  query: ({ userId, reason }) => ({
+    url: `/admin/users/${userId}/ban`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { reason },
+  }),
+  invalidatesTags: ["users"],
+}),
+unbanUser: builder.mutation({
+  query: (userId) => ({
+    url: `/admin/users/${userId}/unban`,
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }),
+  invalidatesTags: ["users"],
+}),
+
+ ///***********Notification api get */
+
+ getNotification: builder.query({
+  query: ( ) => ({
+    url: '/notification/admin',
+    method:'GET',
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`
+    },
+    // body: privacy,
+  }), 
+}),
+
+////***************Withdraw api get */
+ getWithdrawUser: builder.query({
+  providesTags: ['withdrawal'],
+  query: ( ) => ({
+    url: '/withdrawal',
+    method:'GET',
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`
+    },
+    // body: privacy,
+  }), 
+  invalidatesTags:['withdrawal']
+}),
+
+ getSingleWithdrawUser: builder.query({
+  query: (id) => ({
+    url: `/withdrawal/single?withdrawalId=${id}`,
+    method:'GET',
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`
+    },
+    // body: privacy,
+  }), 
+  invalidatesTags:['withdrawal/single?withdrawalId']
+}),
+
+withdrawCancelById: builder.mutation({
+  query: (id) => ({
+    url:`/withdrawal/${id}`,
+    method:'PATCH',
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`
+    },
+    // body:
+  }),
+  invalidatesTags:['withdrawal']
+}),
+
+withdrawPostById: builder.mutation({
+  query: (id) => 
+    {
+    
+      return {
+    url:`/withdrawal/${id}`,
+    method:'POST',
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`
+    },
+    // body:
+      }
+  },
+invalidatesTags: ["withdrawal"] 
+}),
+
+// *****************Profile***************/////
+
+updateProfileInfo: builder.mutation({
+  query: (profileInfo) => ({
+    url: '/users/profile',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+    body: profileInfo,
+  }),
+}),
+// Update profile picture
+updateProfielPicture: builder.mutation({
+  query: (formData) => ({
+    url: '/users/profile-image',
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${localStorage.getItem('token')}`,
+    
+    },
+    body: formData,
+  }),
+}),
+
+// **************slider Image******************/////
+ 
+    getIamage: builder.query({
+      providesTags: ['Image'],
+      query: () => ({
+        url: `/banner-image`,
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`,
+          
+        },
+      })
+    }),
+
+    addSliderImage: builder.mutation({
+      query: (data) => ({
+        url: `/banner-image`,
+        method: "POST",
+        body: data,
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`,
+        }
+      }),
+      invalidatesTags: ['Image'],
+    }),
+
+    deleteImage: builder.mutation({
+      query: (id) => ({
+        url: `/banner-image/${id}`,
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${localStorage.getItem('token')}`,
+        }
+      }),
+      invalidatesTags: ['Image'],
+    })
+
+
+  }), 
+});
+
+ export const {
+     useUpdateProfielPictureMutation,
+     useUpdateProfileInfoMutation,
+      useForgotPasswordMutation,
+      useEmailVerifyMutation,
+      useResetPasswordMutation,
+      useChangPasswordMutation,
+      useGetCategoriesQuery,
+      useAddCategoryMutation,
+      useUpdateCategoryMutation,
+      useDeleteCategoriesMutation,
+      useGetBlogsQuery,
+      useAddBlogsMutation,
+      useDeleteBlogMutation,
+      useUpdateBlogMutation,
+      useGetPrivacyQuery,
+      useAddPrivacyMutation,
+      useGetTermConditonQuery,
+      useAddTermConditionMutation,
+      useGetTrustSafetyQuery,
+      useAddTrustSafetyMutation,
+      useGetBuyerListQuery,
+      useGetFrelancerListQuery,
+      useGetNotificationQuery,
+      useGetWithdrawUserQuery,
+      useGetSingleWithdrawUserQuery,
+      useWithdrawCancelByIdMutation,
+      useWithdrawPostByIdMutation,
+      useTotalStatusQuery,
+      useGetIncomeRatioQuery,
+      useGetEarningQuery,
+      useGetUserRatioQuery,
+      useGetRecentUserQuery,
+      useGetIamageQuery,
+      useAddSliderImageMutation,
+      useDeleteImageMutation,
+      useGetAdminOrdersQuery,
+      useGetAdminGigsQuery,
+      useGetUserActivityQuery,
+      useBanUserMutation,
+      useUnbanUserMutation,
+      useGetSupportTicketsQuery,
+      useGetSupportTicketQuery,
+      usePostSupportMessageMutation,
+      useUpdateSupportStatusMutation,
+      useGetVerificationsQuery,
+      useReviewVerificationMutation,
+      useGetDirectChatsQuery,
+      useGetDirectChatMessagesQuery,
+      useGetOrderChatsQuery,
+      useGetOrderChatMessagesQuery,
+
+ } = apiSlice;

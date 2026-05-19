@@ -1,0 +1,11 @@
+.ant-notification-notice-success {
+    background-color: #0d2723; /* Change this to your desired background color */
+  }
+  
+  .ant-notification-notice-success .ant-notification-notice-message {
+    color: #000; /* Change the text color if needed */
+  }
+  
+  .ant-notification-notice-success .ant-notification-notice-description {
+    color: #000; /* Change the description text color if needed */
+  }

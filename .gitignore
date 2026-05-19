@@ -1,0 +1,31 @@
+# Root .gitignore for the Qwlee monorepo.
+# Each app has its own .gitignore for stack-specific entries; this one
+# covers the few things that need ignoring at the root level.
+
+# macOS Finder cruft
+.DS_Store
+**/.DS_Store
+
+# Editor / OS junk
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Belt-and-braces — every app's own .gitignore already covers these,
+# but listing them here too means an accidentally moved file at the
+# root still gets ignored.
+**/node_modules/
+**/.next/
+**/dist/
+**/build/
+**/coverage/
+
+# NEVER commit any .env file. Use .env.example as the only checked-in
+# template. The three per-app .gitignore files also enforce this.
+**/.env
+**/.env.*
+!**/.env.example

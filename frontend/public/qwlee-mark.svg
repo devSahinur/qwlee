@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" role="img" aria-label="Qwlee">
+  <defs>
+    <linearGradient id="qwlee-icon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4 4)">
+    <circle cx="24" cy="24" r="22" fill="url(#qwlee-icon)"/>
+    <circle cx="24" cy="24" r="13" fill="none" stroke="white" stroke-width="3.5"/>
+    <path d="M33 33 L44 44" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

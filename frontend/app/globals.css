@@ -1,0 +1,175 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+*{
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: "Outfit", sans-serif !important;
+}
+html {
+  scroll-behavior: smooth;
+}
+
+/* Shared skeleton shimmer. Used by components/common/Skeleton.js — kept
+   in globals so it's available to any future skeleton without re-defining
+   the keyframes per component. */
+@keyframes qwlee-shimmer-anim {
+  0%   { background-position: -480px 0; }
+  100% { background-position: 480px 0; }
+}
+.qwlee-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(243, 244, 246, 0) 0,
+    rgba(229, 231, 235, 0.9) 50%,
+    rgba(243, 244, 246, 0) 100%
+  );
+  background-size: 480px 100%;
+  background-repeat: no-repeat;
+  animation: qwlee-shimmer-anim 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qwlee-shimmer { animation: none; }
+}
+
+/* Chat sidebar — soft fade + slide for newly arriving / reordered rows.
+   The wrapper transitions transform on reorder; the keyframe only plays
+   on first mount (and on re-mount after a hard refresh). */
+@keyframes chatRowIn {
+  0%   { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0);     }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[chatRowIn"] { animation: none !important; }
+}
+
+/* Shared Qwlee page surface — a very faint emerald → cyan wash that
+   echoes the hero gradient. Sections that need to "pop" (cards, hero,
+   footer) opt out with their own background; everything else inherits
+   this so the marketplace feels cohesive end-to-end. */
+body {
+  background:
+    radial-gradient(1100px 600px at 85% -10%, rgba(16, 185, 129, 0.06), transparent 60%),
+    radial-gradient(900px 500px at -5% 10%, rgba(8, 145, 178, 0.05), transparent 55%),
+    #ffffff;
+  min-height: 100vh;
+}
+
+li.ant-menu-item.ant-menu-item-only-child {
+  padding-left: 32px !important;
+}
+
+.ant-menu-light .ant-menu-item-selected,
+.ant-menu-light > .ant-menu .ant-menu-item-selected {
+  background-color: #00bf63;
+}
+
+.ant-menu-light .ant-menu-item-selected,
+.ant-menu-light > .ant-menu .ant-menu-item-selected {
+  color: white;
+}
+
+.ant-checkbox-checked .ant-checkbox-inner {
+  background-color: #00bf63;
+  border-color: #00bf63;
+}
+
+.ant-checkbox .ant-checkbox-inner {
+  border: 1px solid #00bf63;
+}
+
+.ant-checkbox-wrapper:not(.ant-checkbox-wrapper-disabled):hover
+  .ant-checkbox-checked:not(.ant-checkbox-disabled)
+  .ant-checkbox-inner {
+  background-color: #00bf63;
+  border-color: transparent;
+}
+
+.ant-checkbox-wrapper:not(.ant-checkbox-wrapper-disabled):hover
+  .ant-checkbox-inner,
+:where(.css-dev-only-do-not-override-17sses9).ant-checkbox:not(
+    .ant-checkbox-disabled
+  ):hover
+  .ant-checkbox-inner {
+  border-color: #00bf63;
+}
+
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title,
+:where(.css-dev-only-do-not-override-17sses9).ant-menu-light
+  > .ant-menu
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title {
+  color: #00bf63;
+}
+
+.ant-radio-wrapper .ant-radio-checked .ant-radio-inner {
+  border-color: #00bf63;
+  background-color: #00bf63;
+}
+
+/* Slider */
+
+.swiper-pagination-bullet {
+  background-color: #00bf63 !important;
+}
+
+.swiper-pagination-bullet-active {
+  background-color: #00bf63 !important;
+}
+
+.custom-box-shadow {
+  box-shadow: 0px 0px 26px 0px #2b2a2a1f;
+}
+
+.tag-input-field {
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  width: 100%;
+  justify-content: flex-start;
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tag-item {
+  background-color: #e6f9ef;
+  border-radius: 10px;
+  margin-bottom: 20px !important;
+  font-size: large;
+  margin-right: 10px;
+  padding: 8px 16px;
+  margin-top: 20px !important;
+  font-weight: 600;
+}
+
+.tag-remove {
+  cursor: pointer;
+  color: black !important;
+  font-weight: bold;
+  font-size: large;
+  margin-left: 5px;
+}
+
+.tags-container {
+  margin: 10px 0;
+}
+
+.jodit-workplace {
+  height: 300px !important;
+}
+
+.swal-confirm-btn {
+  @apply bg-primary text-white hover:bg-secondary font-medium px-4 py-2 rounded;
+}
+
+/* Styling for SweetAlert2 cancel button */
+.swal-cancel-btn {
+  @apply bg-gray-500 text-white hover:bg-gray-600 font-medium px-4 py-2 rounded;
+}

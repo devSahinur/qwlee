@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.customModal {
+    background: #000000;
+    overflow: hidden;
+    
+  }
+
+  .image {
+    opacity: 0.6;
+  }
+  
+  .image:hover {
+    opacity: 1.0;
+  }
+
+  /* Custom styles for Ant Design notifications */
+/* .ant-notification-notice-success {
+  background-color: #576d9c;  /
+}
+
+.ant-notification-notice-success .ant-notification-notice-message {
+  color: #fdf0f0; 
+ 
+ 
+}
+
+.ant-notification-notice-success .ant-notification-notice-description {
+   color: rgb(247, 230, 230)  
+} */

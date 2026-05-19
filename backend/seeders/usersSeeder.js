@@ -1,0 +1,266 @@
+const { User } = require("../src/models");
+const images = require("./utils/images");
+
+// Demo credentials documented in README.md / seeder index summary.
+const ADMINS = [
+  {
+    fullName: "Aria Sterling",
+    email: "admin@example.com",
+    username: "admin",
+    password: "Admin123!",
+    role: "admin",
+    gender: "Female",
+    location: "Sydney, Australia",
+    language: "English",
+    intro: "Platform administrator",
+    about:
+      "Platform operations lead at Qwlee. Oversees moderation, payouts, and seller verification.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Marcus Chen",
+    email: "moderator@example.com",
+    username: "moderator",
+    password: "Admin123!",
+    role: "admin",
+    gender: "Male",
+    location: "Melbourne, Australia",
+    language: "English",
+    intro: "Trust & Safety moderator",
+    about:
+      "Reviews flagged gigs and disputes. Background in fintech compliance.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+];
+
+// Sellers (freelancers). Each carries enough profile data for a believable
+// public page: bio, skills, hourly rate, response time.
+const SELLERS = [
+  {
+    fullName: "Sofia Martinez",
+    email: "seller@example.com",
+    username: "sofiacodes",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Female",
+    location: "Barcelona, Spain",
+    language: "English, Spanish",
+    intro: "Full-Stack Developer · Next.js & Node specialist",
+    about:
+      "8 years building production SaaS products. I focus on Next.js App Router, TypeScript, and clean API design. Past clients include early-stage YC startups and a Series B fintech.",
+    skills: ["Next.js", "React", "Node.js", "PostgreSQL", "TypeScript", "AWS"],
+    perHourRate: "85",
+    responseTime: "1",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+    online: true,
+  },
+  {
+    fullName: "Daniel Park",
+    email: "daniel.park@example.com",
+    username: "danpark",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Male",
+    location: "Seoul, South Korea",
+    language: "English, Korean",
+    intro: "Senior UI/UX Designer · Figma & design systems",
+    about:
+      "I design conversion-focused interfaces for SaaS, fintech and marketplaces. Recent work shipped at 2 unicorns. I bring a documented design system, not just screens.",
+    skills: ["Figma", "Design Systems", "Webflow", "Prototyping", "User Research"],
+    perHourRate: "70",
+    responseTime: "2",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+    online: true,
+  },
+  {
+    fullName: "Priya Anand",
+    email: "priya.anand@example.com",
+    username: "priyaedits",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Female",
+    location: "Bengaluru, India",
+    language: "English, Hindi",
+    intro: "Video editor for YouTube creators & brands",
+    about:
+      "I cut long-form YouTube videos, podcast highlights and short-form ads. Average 24h turnaround. DaVinci Resolve + Premiere Pro.",
+    skills: ["Premiere Pro", "DaVinci Resolve", "After Effects", "Color Grading", "Sound Design"],
+    perHourRate: "45",
+    responseTime: "1",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "James O'Connor",
+    email: "james.oconnor@example.com",
+    username: "jamesseo",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Male",
+    location: "Dublin, Ireland",
+    language: "English",
+    intro: "SEO & content strategist · 6 years in B2B SaaS",
+    about:
+      "I rank B2B SaaS sites for high-intent keywords. Technical SEO audits, content briefs, and link strategy. Verified case studies on request.",
+    skills: ["SEO", "Ahrefs", "Content Strategy", "Schema Markup", "Link Building"],
+    perHourRate: "60",
+    responseTime: "3",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Aisha Mohammed",
+    email: "aisha.mohammed@example.com",
+    username: "aishamobile",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Female",
+    location: "Lagos, Nigeria",
+    language: "English, French",
+    intro: "Mobile app developer · React Native & Flutter",
+    about:
+      "I ship cross-platform mobile apps from prototype to App Store / Play Store. 30+ apps published. Stripe, Firebase, push notifications, offline-first.",
+    skills: ["React Native", "Flutter", "Firebase", "Stripe", "iOS", "Android"],
+    perHourRate: "75",
+    responseTime: "2",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+    online: true,
+  },
+  {
+    fullName: "Lena Fischer",
+    email: "lena.fischer@example.com",
+    username: "lenawrites",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Female",
+    location: "Berlin, Germany",
+    language: "English, German",
+    intro: "Copywriter for landing pages and ad creatives",
+    about:
+      "Direct-response copy for SaaS landing pages, paid social, and email sequences. Tested across 100+ campaigns; I write to convert, not just to read well.",
+    skills: ["Copywriting", "Conversion Optimization", "Email Marketing", "Brand Voice"],
+    perHourRate: "55",
+    responseTime: "2",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Thiago Ribeiro",
+    email: "thiago.ribeiro@example.com",
+    username: "thiagoai",
+    password: "Seller123!",
+    role: "freelancer",
+    gender: "Male",
+    location: "São Paulo, Brazil",
+    language: "English, Portuguese",
+    intro: "AI engineer · LLM apps, RAG, fine-tuning",
+    about:
+      "Build production LLM apps with Claude, GPT, and open-source models. RAG pipelines, evals, agent systems. Background in ML research.",
+    skills: ["LLMs", "Claude API", "RAG", "Python", "FastAPI", "Vector DBs"],
+    perHourRate: "120",
+    responseTime: "1",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+    online: true,
+  },
+];
+
+const BUYERS = [
+  {
+    fullName: "Olivia Bennett",
+    email: "buyer@example.com",
+    username: "oliviab",
+    password: "Buyer123!",
+    role: "buyer",
+    gender: "Female",
+    location: "London, UK",
+    language: "English",
+    intro: "Founder, indie SaaS",
+    about: "Building a project-management tool for design teams.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Ryan Patel",
+    email: "ryan.patel@example.com",
+    username: "ryanp",
+    password: "Buyer123!",
+    role: "buyer",
+    gender: "Male",
+    location: "Toronto, Canada",
+    language: "English",
+    intro: "Marketing lead, e-commerce startup",
+    about: "Looking for ongoing design and content help.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Mia Tanaka",
+    email: "mia.tanaka@example.com",
+    username: "miat",
+    password: "Buyer123!",
+    role: "buyer",
+    gender: "Female",
+    location: "Tokyo, Japan",
+    language: "English, Japanese",
+    intro: "Product manager",
+    about: "Hires freelancers for sprints when our in-house team is at capacity.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Lucas Müller",
+    email: "lucas.muller@example.com",
+    username: "lucasm",
+    password: "Buyer123!",
+    role: "buyer",
+    gender: "Male",
+    location: "Munich, Germany",
+    language: "English, German",
+    intro: "Agency owner",
+    about: "Subcontract specialist work for client projects.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+  {
+    fullName: "Hannah Kim",
+    email: "hannah.kim@example.com",
+    username: "hannahk",
+    password: "Buyer123!",
+    role: "buyer",
+    gender: "Female",
+    location: "Seoul, South Korea",
+    language: "English, Korean",
+    intro: "Indie podcaster",
+    about: "Buys editing and audio mastering work weekly.",
+    isEmailVerified: true,
+    isProfileCompleted: true,
+  },
+];
+
+async function seedUsers() {
+  // `create()` runs the bcrypt pre-save hook; `insertMany()` would not.
+  const attachImages = (u) => ({
+    ...u,
+    image: images.avatar(u.username),
+    coverImage: images.cover(u.username),
+  });
+
+  const admins = await User.create(ADMINS.map(attachImages));
+  const sellers = await User.create(SELLERS.map(attachImages));
+  const buyers = await User.create(BUYERS.map(attachImages));
+
+  return {
+    admins,
+    sellers,
+    buyers,
+    allUsers: [...admins, ...sellers, ...buyers],
+  };
+}
+
+module.exports = { seedUsers };
