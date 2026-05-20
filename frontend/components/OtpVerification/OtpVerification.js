@@ -42,6 +42,12 @@ export default function OtpVerification({ searchParams }) {
       : "") ||
     "";
   const flow = params.get("flow") || ""; // "reset" | "" (signup)
+  // Deep-link the user originally tried to reach. Threaded through the
+  // entire auth funnel: middleware → /sign-in?from=… → /sign-up?from=…
+  // → /verify-email?from=… → /sign-in?from=… → original page.
+  const fromParam = params.get("from") || "";
+  const safeFrom =
+    fromParam.startsWith("/") && !fromParam.startsWith("//") ? fromParam : "";
 
   const [digits, setDigits] = useState(Array(CODE_LEN).fill(""));
   const inputs = useRef([]);
@@ -118,9 +124,11 @@ export default function OtpVerification({ searchParams }) {
         const msg = response.error?.data?.message || "Verification failed";
         if (msg === "Reset password otp successfully verified") {
           toast.success("Code verified");
-          router.push(
-            `/change-password?email=${encodeURIComponent(email)}&oneTimeCode=${encodeURIComponent(otp)}`
-          );
+          const next = new URLSearchParams();
+          next.set("email", email);
+          next.set("oneTimeCode", otp);
+          if (safeFrom) next.set("from", safeFrom);
+          router.push(`/change-password?${next.toString()}`);
           return;
         }
         toast.error(msg);
@@ -131,7 +139,10 @@ export default function OtpVerification({ searchParams }) {
       }
       if (response?.data?.code === 200) {
         toast.success(response.data.message || "Email verified");
-        router.push("/sign-in");
+        const next = new URLSearchParams();
+        if (safeFrom) next.set("from", safeFrom);
+        const qs = next.toString();
+        router.push(qs ? `/sign-in?${qs}` : "/sign-in");
       }
     } catch (err) {
       toast.error(err?.message || "Verification failed");

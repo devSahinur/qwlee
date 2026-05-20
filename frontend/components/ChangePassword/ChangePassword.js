@@ -1,6 +1,6 @@
 "use client";
 import { Form, Input } from "antd";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePostResetPasswordMutation } from "@/app/redux/features/postResetPassword";
 import { toast } from "sonner";
 import Button from "../CustomCreate/Button";
@@ -8,14 +8,24 @@ import AuthCard from "../common/AuthCard";
 
 const ChangePassword = ({ searchParams }) => {
   const router = useRouter();
+  const params = useSearchParams();
   const [setNewPassword, { isLoading }] = usePostResetPasswordMutation();
+
+  // Carry the original deep-link through the reset funnel so the user
+  // lands back on the page they originally tried to reach after
+  // signing in with the new password. Internal paths only — strip
+  // anything that doesn't start with a single "/" to avoid open
+  // redirects.
+  const fromParam = params.get("from") || "";
+  const safeFrom =
+    fromParam.startsWith("/") && !fromParam.startsWith("//") ? fromParam : "";
 
   const handleSubmit = async (values) => {
     const { new_password } = values;
     const res = await setNewPassword({
       password: new_password,
-      email: searchParams?.email,
-      oneTimeCode: searchParams?.oneTimeCode,
+      email: searchParams?.email || params.get("email"),
+      oneTimeCode: searchParams?.oneTimeCode || params.get("oneTimeCode"),
     });
     if (res?.error) {
       toast.error(res?.error?.data?.message || "Could not reset password");
@@ -23,7 +33,10 @@ const ChangePassword = ({ searchParams }) => {
     }
     if (res?.data) {
       toast.success(res.data.message || "Password updated");
-      router.push("/sign-in");
+      const next = new URLSearchParams();
+      if (safeFrom) next.set("from", safeFrom);
+      const qs = next.toString();
+      router.push(qs ? `/sign-in?${qs}` : "/sign-in");
     }
   };
 

@@ -34,6 +34,15 @@ const SignIn = () => {
     if (fromUrl) setBanReason(decodeURIComponent(fromUrl));
   }, [params]);
 
+  // Cross-link helpers — append `?from=` so clicking "Sign up" or
+  // "Forgot password?" doesn't drop the user's original deep-link.
+  const fromForLink = (() => {
+    const f = params.get("from") || "";
+    return f.startsWith("/") && !f.startsWith("//")
+      ? `?from=${encodeURIComponent(f)}`
+      : "";
+  })();
+
   const handleSubmit = async (values) => {
     setBanReason("");
     try {
@@ -83,7 +92,17 @@ const SignIn = () => {
           cookieOpts
         );
         dispatch(setUser(res?.data?.attributes?.user));
-        router.push("/");
+        // Honour `?from=<path>` set by the middleware when it bounced an
+        // unauthenticated request — so the user lands back on the page
+        // they originally wanted instead of dumping them at /. The
+        // value is URL-encoded by the middleware; only allow internal
+        // paths (starting with /) to prevent open-redirect attacks.
+        const fromParam = params.get("from") || "";
+        const safeFrom =
+          fromParam.startsWith("/") && !fromParam.startsWith("//")
+            ? fromParam
+            : "/";
+        router.push(safeFrom);
         toast.success(res?.message);
       } else {
         toast.error(res?.message);
@@ -101,7 +120,7 @@ const SignIn = () => {
         <div className="space-y-1.5">
           <p className="text-sm text-gray-600">
             Don&rsquo;t have an account?{" "}
-            <Link href="/sign-up" className="text-emerald-700 font-medium">
+            <Link href={`/sign-up${fromForLink}`} className="text-emerald-700 font-medium">
               Sign up
             </Link>
           </p>
@@ -172,7 +191,7 @@ const SignIn = () => {
             <Checkbox>Keep me signed in</Checkbox>
           </Form.Item>
           <Link
-            href="/forgot-password"
+            href={`/forgot-password${fromForLink}`}
             className="text-sm text-emerald-700 hover:underline"
           >
             Forgot password?

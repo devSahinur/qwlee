@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Form, Input } from "antd";
 import Link from "next/link";
 import { registerUser } from "@/actions/registerUser";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import Button from "../CustomCreate/Button";
 import AuthCard from "../common/AuthCard";
@@ -79,6 +79,8 @@ function SignUp() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const params = useSearchParams();
+  const fromParam = params.get("from") || "";
   const availability = useUsernameAvailability(username);
   const pw = passwordStrength(password);
   const ip = useIpLocation();
@@ -104,7 +106,15 @@ function SignUp() {
     try {
       const res = await registerUser(newUser);
       if (res?.code == 201) {
-        router.push(`/verify-email?email=${values.email}`);
+        // Forward the `from` deep-link through the OTP screen so the
+        // final post-sign-in landing is the page the user originally
+        // hit (e.g. /order/123 → sign-up → verify → sign-in → /order/123).
+        const next = new URLSearchParams();
+        next.set("email", values.email);
+        if (fromParam.startsWith("/") && !fromParam.startsWith("//")) {
+          next.set("from", fromParam);
+        }
+        router.push(`/verify-email?${next.toString()}`);
         toast.success(res?.message);
       } else {
         toast.error(res?.message);
