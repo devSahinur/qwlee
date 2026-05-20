@@ -17,7 +17,7 @@ import { AiOutlineSafetyCertificate } from "react-icons/ai";
 import { TbLogs, TbReportAnalytics, TbShoppingBag, TbSearch } from "react-icons/tb";
 import { CiSettings } from "react-icons/ci";
 import { PiHandWithdraw } from "react-icons/pi";
-import { BsSliders2, BsClipboardData } from "react-icons/bs";
+import { BsClipboardData } from "react-icons/bs";
 import { LuLifeBuoy } from "react-icons/lu";
 import {
   IoChevronBackOutline,
@@ -60,7 +60,6 @@ const NAV = [
     section: "Content",
     items: [
       { to: "/dashboard/blog", label: "Blog", icon: TbLogs },
-      { to: "/dashboard/slider", label: "Banner slider", icon: BsSliders2 },
       { to: "/dashboard/reports", label: "Reports", icon: TbReportAnalytics },
     ],
   },

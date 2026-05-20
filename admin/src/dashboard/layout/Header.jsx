@@ -25,7 +25,6 @@ const ROUTE_TITLES = [
   { match: /^\/dashboard\/earnings/, title: "Earnings" },
   { match: /^\/dashboard\/withdraw/, title: "Withdrawals" },
   { match: /^\/dashboard\/blog/, title: "Blog" },
-  { match: /^\/dashboard\/slider/, title: "Banner slider" },
   { match: /^\/dashboard\/reports/, title: "Reports" },
   { match: /^\/dashboard\/setting/, title: "Settings" },
   { match: /^\/dashboard\/notification/, title: "Notifications" },
@@ -47,7 +46,6 @@ const QUICK_LINKS = [
   { label: "Earnings", path: "/dashboard/earnings" },
   { label: "Withdrawals", path: "/dashboard/withdraw" },
   { label: "Blog", path: "/dashboard/blog" },
-  { label: "Banner slider", path: "/dashboard/slider" },
   { label: "Settings", path: "/dashboard/setting" },
   { label: "My profile", path: "/dashboard/personalinfo" },
 ];

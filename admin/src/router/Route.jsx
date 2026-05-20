@@ -36,7 +36,6 @@ import PublicRoute from "./PublicRoute";
 import Withdraw from "../dashboard/menu/withdraw";
 import DetailWithdraw from "../dashboard/menu/DetailWithdraw";
 import Login from "../dashboard/auth/Login";
-import Slider from "../dashboard/menu/Slider";
 import Orders from "../dashboard/menu/Orders";
 import Gigs from "../dashboard/menu/Gigs";
 import Reports from "../dashboard/menu/Reports";
@@ -116,7 +115,6 @@ export const router = createBrowserRouter([
       { path: "editTermconditon", element: <EditTermCondition /> },
       { path: "trustsafety", element: <TrustSafety /> },
       { path: "editsafetytrust", element: <EditTrustSafety /> },
-      { path: "slider", element: <Slider /> },
       { path: "orders", element: <Orders /> },
       { path: "gigs", element: <Gigs /> },
       { path: "reports", element: <Reports /> },
