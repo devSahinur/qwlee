@@ -28,6 +28,22 @@ const searchController = require("../../controllers/search.controller");
 router.get("/searches", auth("admin"), searchController.list);
 router.get("/search-stats", auth("admin"), searchController.adminStats);
 
+// Platform settings — payment provider credentials, SMTP, custom
+// methods, misc. Admin-only since these contain secrets.
+const appConfigController = require("../../controllers/appConfig.controller");
+router.get("/settings", auth("admin"), appConfigController.getSettings);
+router.patch("/settings", auth("admin"), appConfigController.updateSettings);
+router.post(
+  "/settings/custom-payments",
+  auth("admin"),
+  appConfigController.addCustomPayment
+);
+router.delete(
+  "/settings/custom-payments/:id",
+  auth("admin"),
+  appConfigController.removeCustomPayment
+);
+
 // Read-only access to platform conversations (DMs + order chats) for
 // moderation. No write endpoints — admins observe, they don't post.
 const adminChatsController = require("../../controllers/adminChats.controller");

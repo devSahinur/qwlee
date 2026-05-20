@@ -18,12 +18,12 @@ import {
 import { HiOutlineMailOpen } from "react-icons/hi";
 import { GoVerified } from "react-icons/go";
 import QwleeLogo from "@/components/common/QwleeLogo";
+import useUser from "@/hooks/useUser";
 
-const MARKETPLACE = [
+const MARKETPLACE_BASE = [
   { label: "Explore services", href: "/gig" },
   { label: "Hire freelancers", href: "/hire-freelancers" },
   { label: "Browse categories", href: "/services" },
-  { label: "Become a seller", href: "/sign-up" },
 ];
 
 const COMPANY = [
@@ -49,7 +49,18 @@ const SOCIAL = [
 
 export default function Footer() {
   const router = useRouter();
+  const user = useUser();
   const [email, setEmail] = useState("");
+
+  // "Become a seller" routes to signup for guests, but to the seller
+  // dashboard's gig-creation flow for signed-in users (they already
+  // have an account — no point sending them back to /sign-up).
+  const MARKETPLACE = [
+    ...MARKETPLACE_BASE,
+    user
+      ? { label: "Sell on Qwlee", href: "/dashboard" }
+      : { label: "Become a seller", href: "/sign-up" },
+  ];
 
   function handleNewsletter(e) {
     e.preventDefault();

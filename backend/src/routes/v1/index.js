@@ -21,6 +21,7 @@ const activityRoute = require('./activity.routes')
 const supportRoute = require('./support.routes')
 const verificationRoute = require('./verification.routes')
 const searchRoute = require('./search.routes')
+const paymentsRoute = require('./payments.routes')
 
 const router = express.Router();
 
@@ -105,6 +106,10 @@ const defaultRoutes = [
   {
     path: "/search",
     route: searchRoute,
+  },
+  {
+    path: "/payments",
+    route: paymentsRoute,
   }
 ];
 

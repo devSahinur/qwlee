@@ -20,6 +20,7 @@ import { HiOutlineLockClosed, HiOutlineLightningBolt } from "react-icons/hi";
 import SearchSuggestions from "@/components/Search/SearchSuggestions";
 import { base } from "@/lib/constant";
 import trackSearch from "@/utils/trackSearch";
+import useUser from "@/hooks/useUser";
 
 const ROTATING_SUGGESTIONS = [
   "Next.js developer",
@@ -44,6 +45,7 @@ const FALLBACK_TRENDING = [
 
 export default function HeroQwlee() {
   const router = useRouter();
+  const user = useUser();
   const [trending, setTrending] = useState(FALLBACK_TRENDING);
 
   // Pull live trending from the search log. Falls back to the seeded
@@ -149,12 +151,14 @@ export default function HeroQwlee() {
             />
           </div>
 
-          <p className="mt-6 md:mt-8 text-sm text-gray-500">
-            New to Qwlee?{" "}
-            <Link href="/sign-up" className="text-emerald-700 font-medium">
-              Create your free account
-            </Link>
-          </p>
+          {!user && (
+            <p className="mt-6 md:mt-8 text-sm text-gray-500">
+              New to Qwlee?{" "}
+              <Link href="/sign-up" className="text-emerald-700 font-medium">
+                Create your free account
+              </Link>
+            </p>
+          )}
         </div>
       </div>
 

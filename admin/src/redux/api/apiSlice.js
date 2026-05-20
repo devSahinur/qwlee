@@ -23,6 +23,7 @@ export const apiSlice = createApi({
     "supportTicket",
     "verifications",
     "searches",
+    "settings",
    ],
   endpoints: (builder) => ({
 
@@ -467,6 +468,48 @@ unbanUser: builder.mutation({
   invalidatesTags: ["users"],
 }),
 
+// Platform settings (payments / SMTP / misc / custom providers).
+getSettings: builder.query({
+  query: () => ({
+    url: `/admin/settings`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes,
+  providesTags: ["settings"],
+}),
+updateSettings: builder.mutation({
+  query: (patch) => ({
+    url: `/admin/settings`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: patch,
+  }),
+  invalidatesTags: ["settings"],
+}),
+addCustomPayment: builder.mutation({
+  query: (payload) => ({
+    url: `/admin/settings/custom-payments`,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: payload,
+  }),
+  invalidatesTags: ["settings"],
+}),
+removeCustomPayment: builder.mutation({
+  query: (id) => ({
+    url: `/admin/settings/custom-payments/${id}`,
+    method: "DELETE",
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  invalidatesTags: ["settings"],
+}),
+
 // Search-log monitoring — paginated table + headline stats.
 getAdminSearches: builder.query({
   query: (params = {}) => {
@@ -675,5 +718,9 @@ updateProfielPicture: builder.mutation({
       useGetOrderChatMessagesQuery,
       useGetAdminSearchesQuery,
       useGetSearchStatsQuery,
+      useGetSettingsQuery,
+      useUpdateSettingsMutation,
+      useAddCustomPaymentMutation,
+      useRemoveCustomPaymentMutation,
 
  } = apiSlice;
