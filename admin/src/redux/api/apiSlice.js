@@ -443,6 +443,90 @@ updateSupportStatus: builder.mutation({
   ],
 }),
 
+// Seller level controls — list, override per-seller, edit tier thresholds.
+getSellerLevels: builder.query({
+  query: ({ search = "" } = {}) => ({
+    url: `/admin/seller-levels?search=${encodeURIComponent(search)}`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes?.sellers || [],
+  providesTags: ["users"],
+}),
+getLevelTiers: builder.query({
+  query: () => ({
+    url: `/admin/seller-levels/tiers`,
+    headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
+  }),
+  transformResponse: (res) => res?.data?.attributes?.tiers || [],
+  providesTags: ["settings"],
+}),
+updateLevelTiers: builder.mutation({
+  query: (tiers) => ({
+    url: `/admin/seller-levels/tiers`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { tiers },
+  }),
+  invalidatesTags: ["settings", "users"],
+}),
+setLevelOverride: builder.mutation({
+  query: ({ userId, tierId, reason }) => ({
+    url: `/admin/seller-levels/${userId}/override`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { tierId, reason },
+  }),
+  invalidatesTags: ["users"],
+}),
+
+// Admin delete a gig — soft by default (sets isDeleted=true), or
+// `hard: true` to permanently delete (only allowed when the gig has
+// zero orders and reviews).
+deleteAdminGig: builder.mutation({
+  query: ({ gigId, hard = false, reason }) => ({
+    url: `/admin/gigs/${gigId}${hard ? "?hard=true" : ""}`,
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: hard ? undefined : { reason },
+  }),
+  invalidatesTags: ["gigs"],
+}),
+restoreAdminGig: builder.mutation({
+  query: (gigId) => ({
+    url: `/admin/gigs/${gigId}/restore`,
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }),
+  invalidatesTags: ["gigs"],
+}),
+
+// Gig moderation — flip a gig's status (active / pending /
+// requires-modification / denied / paused / draft). Reason is shown
+// to the seller on their next dashboard load.
+updateGigStatus: builder.mutation({
+  query: ({ gigId, status, reason }) => ({
+    url: `/admin/gigs/${gigId}/status`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { status, reason },
+  }),
+  invalidatesTags: ["gigs"],
+}),
+
 // Admin opens a support ticket on behalf of users — orderId resolves
 // buyer + seller as participants, or pass participantIds explicitly.
 adminCreateTicket: builder.mutation({
@@ -767,5 +851,12 @@ updateProfielPicture: builder.mutation({
       useSendTestEmailMutation,
       useAdminCancelOrderMutation,
       useAdminCreateTicketMutation,
+      useUpdateGigStatusMutation,
+      useGetSellerLevelsQuery,
+      useGetLevelTiersQuery,
+      useUpdateLevelTiersMutation,
+      useSetLevelOverrideMutation,
+      useDeleteAdminGigMutation,
+      useRestoreAdminGigMutation,
 
  } = apiSlice;

@@ -62,6 +62,25 @@ const appConfigSchema = new mongoose.Schema(
     },
     customPayments: { type: [customProviderSchema], default: [] },
     smtp: { type: smtpSchema, default: () => ({}) },
+    // Seller-level tier thresholds. Admin-editable so the platform
+    // can re-calibrate as it grows without a deploy. Falls back to a
+    // sensible default in the service if missing/empty.
+    sellerLevels: {
+      type: [
+        new mongoose.Schema(
+          {
+            id: { type: String, required: true },
+            label: { type: String, required: true },
+            minOrders: { type: Number, default: 0 },
+            minClients: { type: Number, default: 0 },
+            minEarnings: { type: Number, default: 0 },
+            minRating: { type: Number, default: 0 },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
     // Generic key/value bag for misc platform settings (currency,
     // commission %, support email shown on contact page, etc.) so the
     // admin can drop in arbitrary settings without a schema change.

@@ -22,6 +22,8 @@ import useUser from "@/hooks/useUser";
 import Avatar from "@/components/common/Avatar";
 import Kpi from "@/components/Dashboard/Kpi";
 import RecentOrdersTable from "@/components/Dashboard/RecentOrdersTable";
+import LevelOverview from "@/components/Dashboard/LevelOverview";
+import SellerGigsTable from "@/components/Dashboard/SellerGigsTable";
 
 export default function FreelancerDashboard() {
   const user = useUser();
@@ -117,6 +119,13 @@ export default function FreelancerDashboard() {
           loading={loading}
         />
       </div>
+
+      {/* Fiverr-style level overview — current level, success score,
+          rating, response rate, progress bars toward the next level. */}
+      <LevelOverview />
+
+      {/* Gigs management with status tabs + per-gig stats table. */}
+      <SellerGigsTable />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 md:gap-6">
         <aside className="lg:col-span-1 space-y-5">

@@ -46,6 +46,7 @@ const NAV = [
     items: [
       { to: "/dashboard/frelancer", label: "Freelancers", icon: FaUsersLine },
       { to: "/dashboard/buyerlist", label: "Buyers", icon: BiSolidUserPlus },
+      { to: "/dashboard/seller-levels", label: "Seller levels", icon: AiOutlineSafetyCertificate },
     ],
   },
   {

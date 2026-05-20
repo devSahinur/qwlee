@@ -18,6 +18,26 @@ router
   .put(auth("common"), gigLoveController.gigUnlove)
   .get(auth("common"), gigLoveController.gigLoveList);
 router.route("/public").get(gigController.publicGigs);
+
+// Seller-facing dashboard endpoints — level overview + my-gigs stats.
+const sellerLevelController = require("../../controllers/sellerLevel.controller");
+router.get(
+  "/mine/level",
+  auth("freelancer"),
+  sellerLevelController.myLevelOverview
+);
+router.get(
+  "/mine/stats",
+  auth("freelancer"),
+  sellerLevelController.myGigsStats
+);
+
+// Public impression tracker — frontend fire-and-forget on a gig view.
+// Atomic $inc so concurrent views don't lose count. Kept open (no
+// auth) since anonymous visitors browse gigs.
+const impressionController = require("../../controllers/gigImpression.controller");
+router.post("/:gigId/impression", impressionController.bumpImpression);
+router.post("/:gigId/click", impressionController.bumpClick);
 router
   .route("/image")
   .post(

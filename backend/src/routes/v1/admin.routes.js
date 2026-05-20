@@ -40,6 +40,22 @@ router.post(
   supportController.adminCreateTicket
 );
 
+// Gig moderation — flip a gig's status (approve / deny / request
+// modification / pause). Reason is shown to the seller on the next
+// dashboard load.
+const adminGigController = require("../../controllers/adminGig.controller");
+router.patch(
+  "/gigs/:gigId/status",
+  auth("admin"),
+  adminGigController.updateGigStatus
+);
+router.delete("/gigs/:gigId", auth("admin"), adminGigController.deleteGig);
+router.patch(
+  "/gigs/:gigId/restore",
+  auth("admin"),
+  adminGigController.restoreGig
+);
+
 // Admin search logs — every marketplace query (anonymous + authed).
 const searchController = require("../../controllers/search.controller");
 router.get("/searches", auth("admin"), searchController.list);
@@ -81,6 +97,18 @@ router.get(
   "/order-chats/:orderId/messages",
   auth("admin"),
   adminChatsController.getOrderChat
+);
+
+// Seller level controls — list every seller's level, edit the tier
+// thresholds globally, or pin a single seller to a specific tier.
+const adminLevelController = require("../../controllers/adminLevel.controller");
+router.get("/seller-levels", auth("admin"), adminLevelController.listSellerLevels);
+router.get("/seller-levels/tiers", auth("admin"), adminLevelController.getTiers);
+router.patch("/seller-levels/tiers", auth("admin"), adminLevelController.updateTiers);
+router.patch(
+  "/seller-levels/:userId/override",
+  auth("admin"),
+  adminLevelController.setOverride
 );
 
 module.exports = router;

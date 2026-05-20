@@ -145,6 +145,20 @@ const userSchema = mongoose.Schema(
         default: 0.0,
       },
     },
+    // Manual seller-level override set by an admin. When `tierId` is
+    // a non-empty tier id (e.g. "level2"), the seller's computed level
+    // is pinned to that tier and the qualifies-for-next progress hides.
+    // Empty string = no override (default — derive from metrics).
+    levelOverride: {
+      tierId: { type: String, default: "" },
+      reason: { type: String, default: "" },
+      setBy: {
+        type: mongoose.SchemaTypes.ObjectId,
+        ref: "User",
+        default: null,
+      },
+      setAt: { type: Date, default: null },
+    },
     isDeleted: { type: Boolean, default: false },
     isBan: { type: Boolean, default: false },
     // Reason shown on the sign-in page when a banned user tries to log

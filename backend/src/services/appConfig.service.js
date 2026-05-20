@@ -107,6 +107,10 @@ async function updateConfig(patch = {}) {
     doc.misc = { ...(doc.misc || {}), ...patch.misc };
     doc.markModified("misc");
   }
+  if (Array.isArray(patch.sellerLevels)) {
+    doc.sellerLevels = patch.sellerLevels;
+    doc.markModified("sellerLevels");
+  }
   await doc.save();
   invalidate();
   return doc;
