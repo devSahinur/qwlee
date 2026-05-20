@@ -9,6 +9,7 @@ import Image from "next/image";
 import CategoriesCard from "./CategoriesCard";
 import CategoriesCardSkeleton from "./CategoriesCardSkeleton";
 import { useGetAllCategoryQuery } from "@/app/redux/features/getAllCategoryApi";
+import { RevealStagger, RevealItem } from "@/components/common/Reveal";
 
 const MostPopularCategories = () => {
   const router = useRouter();
@@ -37,11 +38,16 @@ const MostPopularCategories = () => {
     );
   } else {
     body = (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+      <RevealStagger
+        gap={0.04}
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4"
+      >
         {categories.map((data) => (
-          <CategoriesCard key={data.id} data={data} />
+          <RevealItem key={data.id}>
+            <CategoriesCard data={data} />
+          </RevealItem>
         ))}
-      </div>
+      </RevealStagger>
     );
   }
 

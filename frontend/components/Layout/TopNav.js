@@ -307,7 +307,7 @@ export default function TopNav() {
               When hidden, the empty flex-1 spacer below still pushes the
               right nav to the right edge. */}
           {showInlineSearch && (
-            <div className="hidden md:block flex-1 max-w-xl">
+            <div className="hidden md:block flex-1 min-w-0 max-w-xl">
               <SearchSuggestions size="sm" placeholder="Find a service…" />
             </div>
           )}

@@ -44,6 +44,7 @@ const FALLBACK_TRENDING = [
   "AI",
 ];
 
+
 export default function HeroQwlee() {
   const router = useRouter();
   // Read auth state in a client-only effect so SSR + first client paint
@@ -92,66 +93,98 @@ export default function HeroQwlee() {
   }
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-cyan-50">
-      {/* Animated backdrop — desktop only. Hidden on mobile to keep
-          paint cheap on phones. */}
+    // NOTE: section is overflow-VISIBLE so the search dropdown can
+    // extend past the hero's bottom edge. The blurred decorative blobs
+    // get their own clipping layer below so they can't bleed out of
+    // the hero — separation of concerns: backdrop is clipped, content
+    // is free.
+    <section className="relative bg-gradient-to-br from-emerald-50 via-white to-cyan-50">
+      {/* Backdrop clip layer — overflow-hidden lives ONLY here so the
+          decorative blobs stay inside the hero while the content
+          layer (including the search dropdown) is unclipped. */}
       <div
         aria-hidden
-        className="hidden md:block absolute inset-0 pointer-events-none"
+        className="absolute inset-0 overflow-hidden pointer-events-none"
       >
-        <div className="qwlee-blob qwlee-blob-a" />
-        <div className="qwlee-blob qwlee-blob-b" />
-        <div className="qwlee-blob qwlee-blob-c" />
+        <div className="hidden md:block absolute inset-0">
+          <div className="qwlee-blob qwlee-blob-a" />
+          <div className="qwlee-blob qwlee-blob-b" />
+          <div className="qwlee-blob qwlee-blob-c" />
+        </div>
+        <div className="md:hidden absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-200/40 blur-3xl" />
+        <div className="md:hidden absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-cyan-200/40 blur-3xl" />
       </div>
-
-      {/* Static blobs on all viewports (subtle, give the hero some shape
-          even when the animated layer is hidden on mobile). */}
-      <div
-        aria-hidden
-        className="md:hidden absolute -top-24 -right-24 w-72 h-72 rounded-full bg-emerald-200/40 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="md:hidden absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-cyan-200/40 blur-3xl"
-      />
 
       <div className="relative container mx-auto px-4 py-14 md:py-24 max-w-5xl">
         <div className="text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-emerald-100 text-emerald-700 text-xs font-medium">
+          {/* Pure-CSS entrance animations. Every element below uses the
+              `qwlee-rise` class with a staggered `animationDelay`. CSS
+              keyframes ALWAYS replay on mount and `animation-fill-mode:
+              both` makes the final state stick — bulletproof across
+              every Next.js navigation case (route-cache, back/forward,
+              hard nav). Snappy 0.4s, custom-curve ease for a polished
+              feel. */}
+          <span
+            className="qwlee-rise inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-emerald-100 text-emerald-700 text-xs font-medium"
+            style={{ animationDelay: "40ms" }}
+          >
             <GoVerified /> Trusted freelancers · verified payouts
           </span>
-          <h1 className="mt-4 md:mt-5 text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-gray-900">
+          <h1
+            className="qwlee-rise mt-4 md:mt-5 text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-gray-900"
+            style={{ animationDelay: "100ms" }}
+          >
             Find the right freelancer{" "}
             <span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
               for any project
             </span>
           </h1>
-          <p className="mt-3 md:mt-4 text-sm md:text-lg text-gray-600 max-w-2xl mx-auto">
+          <p
+            className="qwlee-rise mt-3 md:mt-4 text-sm md:text-lg text-gray-600 max-w-2xl mx-auto"
+            style={{ animationDelay: "160ms" }}
+          >
             Web, design, video, AI, and more — hire from a global marketplace
             of vetted professionals.
           </p>
 
-          <div className="mt-6 md:mt-8 mx-auto max-w-2xl text-left">
+          {/* Search wrapper intentionally uses qwlee-fade (opacity only)
+              instead of qwlee-rise (translate + opacity). A `transform`
+              creates a new CSS stacking context which would trap the
+              absolutely-positioned suggestion dropdown's z-index inside
+              this wrapper, making it appear behind other page chrome
+              after the animation completes. Opacity-only entrance keeps
+              the dropdown free to stack over everything. */}
+          <div
+            className="qwlee-fade mt-6 md:mt-8 mx-auto max-w-2xl text-left relative z-30"
+            style={{ animationDelay: "220ms" }}
+          >
             <SearchSuggestions
               size="lg"
               rotatingPlaceholders={ROTATING_SUGGESTIONS}
             />
           </div>
 
-          <div className="mt-4 md:mt-5 flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
+          <div
+            className="qwlee-rise mt-4 md:mt-5 flex flex-wrap items-center justify-center gap-1.5 md:gap-2"
+            style={{ animationDelay: "280ms" }}
+          >
             <span className="text-xs md:text-sm text-gray-500">Trending:</span>
-            {trending.map((t) => (
+            {trending.map((t, i) => (
               <button
                 key={t}
                 onClick={() => searchTerm(t)}
-                className="px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-gray-200 bg-white text-xs md:text-sm text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition"
+                className="qwlee-pop px-2.5 py-1 md:px-3 md:py-1.5 rounded-full border border-gray-200 bg-white text-xs md:text-sm text-gray-700 hover:border-emerald-500 hover:text-emerald-700 hover:-translate-y-0.5 transition"
+                style={{ animationDelay: `${340 + i * 35}ms` }}
               >
                 {t}
               </button>
             ))}
           </div>
 
-          <div className="mt-10 md:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-left">
+          <div
+            className="qwlee-rise mt-10 md:mt-12 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-left"
+            style={{ animationDelay: "420ms" }}
+          >
             <TrustCard
               icon={<HiOutlineLockClosed className="w-5 h-5" />}
               title="Secure payments"
@@ -170,7 +203,10 @@ export default function HeroQwlee() {
           </div>
 
           {!user && (
-            <p className="mt-6 md:mt-8 text-sm text-gray-500">
+            <p
+              className="qwlee-rise mt-6 md:mt-8 text-sm text-gray-500"
+              style={{ animationDelay: "500ms" }}
+            >
               New to Qwlee?{" "}
               <Link href="/sign-up" className="text-emerald-700 font-medium">
                 Create your free account
@@ -229,6 +265,57 @@ export default function HeroQwlee() {
         }
         @media (prefers-reduced-motion: reduce) {
           .qwlee-blob { animation: none !important; }
+          .qwlee-rise, .qwlee-pop, .qwlee-fade {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+        }
+
+        /* Hero entrance animations.
+           animation-fill-mode both makes the from-state apply BEFORE
+           the animation starts (no flash of un-styled content) AND
+           keeps the to-state AFTER it ends. The combination is what
+           makes CSS keyframes bulletproof on Next.js route restores
+           since CSS animations always replay on a fresh element mount
+           and the final state is preserved regardless. */
+        .qwlee-rise {
+          opacity: 0;
+          transform: translateY(16px);
+          animation: qwlee-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes qwlee-rise {
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Opacity-only fade for elements that contain absolutely-
+           positioned dropdowns. Avoids the transform-induced stacking
+           context that qwlee-rise creates. */
+        .qwlee-fade {
+          opacity: 0;
+          animation: qwlee-fade 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes qwlee-fade {
+          to { opacity: 1; }
+        }
+
+        .qwlee-pop {
+          opacity: 0;
+          transform: translateY(8px) scale(0.94);
+          animation: qwlee-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes qwlee-pop {
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Card lift on hover — same effect framer-motion was doing,
+           but a pure CSS transition with no extra JS overhead. */
+        :global(.qwlee-trust-card) {
+          transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                      border-color 0.2s, box-shadow 0.2s;
+        }
+        :global(.qwlee-trust-card:hover) {
+          transform: translateY(-3px);
         }
       `}</style>
     </section>
@@ -237,7 +324,7 @@ export default function HeroQwlee() {
 
 function TrustCard({ icon, title, body }) {
   return (
-    <div className="bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 flex items-start gap-3">
+    <div className="qwlee-trust-card bg-white/80 backdrop-blur rounded-xl border border-gray-100 p-4 flex items-start gap-3 hover:border-emerald-200 hover:shadow-sm">
       <div className="shrink-0 w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
         {icon}
       </div>

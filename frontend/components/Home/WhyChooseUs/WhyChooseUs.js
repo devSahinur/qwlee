@@ -1,5 +1,8 @@
+"use client";
 import Image from "next/image";
 import React from "react";
+import { motion } from "framer-motion";
+import { RevealStagger, RevealItem } from "@/components/common/Reveal";
 
 const whyChooseUsData = [
   {
@@ -54,12 +57,20 @@ const WhyChooseUs = () => {
           Why Choose Us
         </h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="flex flex-col gap-5 items-end">
+          <RevealStagger gap={0.08} className="flex flex-col gap-5 items-end">
             {whyChooseUsData.slice(0, 3).map((item) => (
-              <WhyChooseUsCard1 key={item.id} data={item} />
+              <RevealItem key={item.id} className="w-full md:w-auto">
+                <WhyChooseUsCard1 data={item} />
+              </RevealItem>
             ))}
-          </div>
-          <div className="flex justify-center items-center">
+          </RevealStagger>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "-50px 0px" }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="flex justify-center items-center"
+          >
             <Image
               src="/home/WhyChooseUs.png"
               width={3840}
@@ -67,12 +78,14 @@ const WhyChooseUs = () => {
               className="w-[290px] h-[240px]"
               alt="Why Choose Us"
             />
-          </div>
-          <div className="flex flex-col gap-5 items-start">
+          </motion.div>
+          <RevealStagger gap={0.08} className="flex flex-col gap-5 items-start">
             {whyChooseUsData.slice(3).map((item) => (
-              <WhyChooseUsCard key={item.id} data={item} />
+              <RevealItem key={item.id} className="w-full md:w-auto">
+                <WhyChooseUsCard data={item} />
+              </RevealItem>
             ))}
-          </div>
+          </RevealStagger>
         </div>
       </div>
     </div>

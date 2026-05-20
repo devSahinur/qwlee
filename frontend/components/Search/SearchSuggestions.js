@@ -160,17 +160,23 @@ export default function SearchSuggestions({
     commitSearch();
   }
 
+  // The bar uses an "input + inline pill button" layout — same approach
+  // Fiverr uses. The wrap has a subtle border that brightens on focus,
+  // and the submit pill is inset by 4px so it floats inside the bar
+  // rather than butting against the edges.
   const sizeClasses =
     size === "lg"
       ? {
-          wrap: "rounded-2xl shadow-sm",
-          input: "py-4 px-3 text-base",
-          btn: "m-1.5 px-5 py-3 rounded-xl text-base",
+          wrap: "rounded-2xl shadow-sm h-14",
+          input: "px-4 text-base",
+          btn: "m-1.5 px-5 py-2.5 rounded-xl text-base gap-2",
+          icon: "w-5 h-5",
         }
       : {
-          wrap: "rounded-lg",
-          input: "py-2 px-3 text-sm",
-          btn: "px-4 py-2 text-sm",
+          wrap: "rounded-full h-11 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+          input: "px-3 text-sm",
+          btn: "m-1 px-4 py-1.5 rounded-full text-sm gap-1.5",
+          icon: "w-4 h-4",
         };
 
   const dynPlaceholder =
@@ -179,14 +185,18 @@ export default function SearchSuggestions({
       : placeholder;
 
   return (
-    <div ref={rootRef} className={`relative ${className}`}>
+    <div ref={rootRef} className={`relative min-w-0 ${className}`}>
       <form
         onSubmit={handleSubmit}
-        className={`flex items-center bg-white border border-gray-200 focus-within:border-emerald-500 transition ${sizeClasses.wrap}`}
+        className={`flex items-center min-w-0 bg-white border border-gray-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100 transition ${sizeClasses.wrap}`}
       >
-        <div className="pl-3 text-gray-400">
-          <IoSearch className="w-5 h-5" />
+        <div className={`${size === "lg" ? "pl-4" : "pl-3.5"} text-gray-400 shrink-0`}>
+          <IoSearch className={sizeClasses.icon} />
         </div>
+        {/* min-w-0 lets the input shrink below its intrinsic size (the
+            long rotating placeholder would otherwise force horizontal
+            overflow on narrow viewports). w-full + flex-1 keeps it
+            filling all available space. */}
         <input
           ref={inputRef}
           type="search"
@@ -199,7 +209,7 @@ export default function SearchSuggestions({
           onFocus={() => setOpen(true)}
           placeholder={dynPlaceholder}
           aria-label="Search Qwlee"
-          className={`flex-1 bg-transparent outline-none ${sizeClasses.input}`}
+          className={`flex-1 w-full min-w-0 bg-transparent outline-none placeholder:text-gray-400 ${sizeClasses.input}`}
         />
         {query && (
           <button
@@ -208,39 +218,48 @@ export default function SearchSuggestions({
               setQuery("");
               inputRef.current?.focus();
             }}
-            className="px-2 text-gray-400 hover:text-gray-600"
+            className={`${size === "lg" ? "px-2.5" : "px-2"} text-gray-400 hover:text-gray-700 shrink-0`}
             aria-label="Clear"
           >
-            <IoClose className="w-5 h-5" />
+            <IoClose className={sizeClasses.icon} />
           </button>
         )}
         <button
           type="submit"
-          className={`bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition ${sizeClasses.btn}`}
+          aria-label="Search"
+          className={`inline-flex items-center justify-center bg-gray-900 hover:bg-emerald-600 text-white font-semibold transition shrink-0 ${sizeClasses.btn}`}
         >
-          Search
+          <IoSearch className={sizeClasses.icon} />
+          {size === "lg" ? <span>Search</span> : <span className="hidden sm:inline">Search</span>}
         </button>
       </form>
 
       {open && (
+        // Solid-white panel — back to the original clean look. z-index
+        // stays at 60 so it sits above any decorative animated blob /
+        // hover layers behind it.
         <div
-          className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50"
+          className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-[60] max-w-full"
           style={{ boxShadow: "0 12px 36px rgba(15,23,42,0.12)" }}
         >
           {query.trim() === "" ? (
-            <div className="p-3">
+            // Empty-state panel — same scroll bounds as the typed-state
+            // branch below so the dropdown can't grow unbounded when the
+            // user has many recent searches.
+            <div className="p-3 max-h-[60vh] overflow-y-auto">
               {recents.length > 0 && (
                 <div className="mb-3">
-                  <div className="flex items-center justify-between px-2 py-1.5">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-                      <IoTimeOutline /> Recent searches
+                  <div className="flex items-center justify-between px-2 py-1.5 gap-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex items-center gap-1.5 min-w-0">
+                      <IoTimeOutline className="shrink-0" />
+                      <span className="truncate">Recent searches</span>
                     </span>
                     <button
                       onClick={() => {
                         clearRecents();
                         setRecents([]);
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="text-xs text-gray-400 hover:text-gray-600 shrink-0"
                     >
                       Clear
                     </button>
@@ -251,10 +270,10 @@ export default function SearchSuggestions({
                         <button
                           type="button"
                           onClick={() => commitSearch(r)}
-                          className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-50 text-sm flex items-center gap-2"
+                          className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-50 text-sm flex items-center gap-2 min-w-0"
                         >
-                          <IoTimeOutline className="text-gray-400" />
-                          {r}
+                          <IoTimeOutline className="text-gray-400 shrink-0" />
+                          <span className="truncate flex-1 min-w-0">{r}</span>
                         </button>
                       </li>
                     ))}
@@ -271,7 +290,7 @@ export default function SearchSuggestions({
                       key={t}
                       type="button"
                       onClick={() => commitSearch(t)}
-                      className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700"
+                      className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 max-w-full truncate"
                     >
                       {t}
                     </button>

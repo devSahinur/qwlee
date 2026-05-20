@@ -9,21 +9,42 @@ import MostPopularFreelancers from "@/components/Home/MostPopularFreelancers/Mos
 import Testimonials from "@/components/Home/Testimonials/Testimonials";
 import TheLatestNewsAndBlog from "@/components/Home/TheLatestNewsAndBlog/TheLatestNewsAndBlog";
 import WhyChooseUs from "@/components/Home/WhyChooseUs/WhyChooseUs";
+import Reveal from "@/components/common/Reveal";
 
+// Every section animates in on scroll via a shared <Reveal> wrapper.
+// The hero stays animation-free (it's above the fold and instant content
+// is the priority) — animations only kick in for sections the user
+// reaches by scrolling.
 const Home = () => {
   return (
     <PrimaryLayout>
       <main>
         <HeroQwlee />
-        <MarketplaceStats />
+        <Reveal>
+          <MarketplaceStats />
+        </Reveal>
         {/* Renders nothing for first-time visitors with empty localStorage */}
-        <RecentlyViewedGigs />
-        <MostPopularCategories />
-        <MostPopularFreelancers />
-        <WhyChooseUs />
-        <Testimonials />
-        <JoinCNNCTR />
-        <TheLatestNewsAndBlog />
+        <Reveal>
+          <RecentlyViewedGigs />
+        </Reveal>
+        <Reveal>
+          <MostPopularCategories />
+        </Reveal>
+        <Reveal>
+          <MostPopularFreelancers />
+        </Reveal>
+        <Reveal>
+          <WhyChooseUs />
+        </Reveal>
+        <Reveal>
+          <Testimonials />
+        </Reveal>
+        <Reveal>
+          <JoinCNNCTR />
+        </Reveal>
+        <Reveal>
+          <TheLatestNewsAndBlog />
+        </Reveal>
       </main>
     </PrimaryLayout>
   );

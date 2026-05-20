@@ -31,6 +31,15 @@ router.patch(
   adminController.cancelOrder
 );
 
+// Admin opens a support ticket on behalf of users. Either pass orderId
+// (auto-resolves buyer + seller) or an explicit participantIds array.
+const supportController = require("../../controllers/support.controller");
+router.post(
+  "/support/tickets",
+  auth("admin"),
+  supportController.adminCreateTicket
+);
+
 // Admin search logs — every marketplace query (anonymous + authed).
 const searchController = require("../../controllers/search.controller");
 router.get("/searches", auth("admin"), searchController.list);

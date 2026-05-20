@@ -443,6 +443,21 @@ updateSupportStatus: builder.mutation({
   ],
 }),
 
+// Admin opens a support ticket on behalf of users — orderId resolves
+// buyer + seller as participants, or pass participantIds explicitly.
+adminCreateTicket: builder.mutation({
+  query: (body) => ({
+    url: `/admin/support/tickets`,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body,
+  }),
+  invalidatesTags: ["supportTickets"],
+}),
+
 // Admin force-cancel order — Fiverr-style support override. Works on any
 // order regardless of status. Optional `reason` is shown in the
 // cancellation email to both parties and stored on the order for audit.
@@ -751,5 +766,6 @@ updateProfielPicture: builder.mutation({
       useRemoveCustomPaymentMutation,
       useSendTestEmailMutation,
       useAdminCancelOrderMutation,
+      useAdminCreateTicketMutation,
 
  } = apiSlice;

@@ -33,13 +33,17 @@ export default function FreelancersCard({ data }) {
     : [];
 
   return (
+    // h-full + flex-col makes every card in the row the same height
+    // (CSS Grid already stretches rows by default; this opts the card
+    // INTO that stretching). The inner body is `flex-1` so the meta
+    // footer always sits at the bottom via `mt-auto`.
     <Link
       href={href}
-      className="group block bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-md transition overflow-hidden"
+      className="group flex h-full flex-col bg-white rounded-2xl border border-gray-200 hover:border-emerald-300 hover:shadow-md transition overflow-hidden"
     >
-      <div className="p-5">
+      <div className="flex flex-col flex-1 p-5">
         <div className="flex items-start gap-3">
-          <div className="relative">
+          <div className="relative shrink-0">
             <Avatar src={image} name={fullName} size={56} rounded />
             {online && (
               <span
@@ -56,7 +60,7 @@ export default function FreelancersCard({ data }) {
               <div className="text-xs text-gray-500 truncate">@{username}</div>
             )}
           </div>
-          <div className="flex items-center gap-1 text-amber-500 text-sm">
+          <div className="flex items-center gap-1 text-amber-500 text-sm shrink-0">
             <GiRoundStar />
             <span className="text-gray-900 font-medium">
               {review?.rating ? Number(review.rating).toFixed(1) : "—"}
@@ -71,26 +75,29 @@ export default function FreelancersCard({ data }) {
           {intro || "Freelancer on Qwlee."}
         </p>
 
-        {skillList.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {skillList.slice(0, 3).map((s, i) => (
-              <span
-                key={`${s}-${i}`}
-                className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700"
-              >
-                {s}
-              </span>
-            ))}
-            {skillList.length > 3 && (
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                +{skillList.length - 3}
-              </span>
-            )}
-          </div>
-        )}
+        {/* Skill chip row always rendered (with a min-height reservation
+            even when empty) so cards without skills don't end up
+            shorter than cards that have them. */}
+        <div className="mt-3 flex flex-wrap gap-1.5 min-h-[1.75rem]">
+          {skillList.slice(0, 3).map((s, i) => (
+            <span
+              key={`${s}-${i}`}
+              className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700"
+            >
+              {s}
+            </span>
+          ))}
+          {skillList.length > 3 && (
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+              +{skillList.length - 3}
+            </span>
+          )}
+        </div>
 
-        <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1 text-gray-500 truncate">
+        {/* mt-auto pins the meta footer to the bottom of every card,
+            regardless of how much intro / skills content sits above. */}
+        <div className="mt-auto pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-1 text-gray-500 truncate min-w-0">
             {online ? (
               <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
                 <GoDotFill /> Online
@@ -99,7 +106,7 @@ export default function FreelancersCard({ data }) {
               <span className="truncate">{location || "—"}</span>
             )}
           </div>
-          <div className="text-gray-900 font-semibold">
+          <div className="text-gray-900 font-semibold shrink-0 ml-2">
             {perHourRate ? `$${perHourRate}/hr` : "—"}
           </div>
         </div>

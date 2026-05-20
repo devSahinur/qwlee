@@ -6,11 +6,17 @@
 // so the admin can see the full conversation context.
 
 import { useMemo, useState } from "react";
-import { IoSearch, IoCloseCircleOutline, IoClose } from "react-icons/io5";
+import {
+  IoSearch,
+  IoCloseCircleOutline,
+  IoClose,
+  IoHelpBuoyOutline,
+} from "react-icons/io5";
 import toast from "react-hot-toast";
 import {
   useGetAdminOrdersQuery,
   useAdminCancelOrderMutation,
+  useAdminCreateTicketMutation,
 } from "../../redux/api/apiSlice";
 
 import PageHeader from "../../common/PageHeader";
@@ -42,6 +48,7 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [ticketTarget, setTicketTarget] = useState(null);
 
   const { data, isFetching } = useGetAdminOrdersQuery({});
   const rows = data?.data?.attributes?.results || [];
@@ -149,6 +156,15 @@ export default function Orders() {
       label: "",
       render: (r) => (
         <div className="flex items-center gap-3 justify-end">
+          <button
+            type="button"
+            onClick={() => setTicketTarget(r)}
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary-700 hover:text-primary-800"
+            title="Open a support ticket on this order"
+          >
+            <IoHelpBuoyOutline className="w-3.5 h-3.5" />
+            Ticket
+          </button>
           {r.status !== "cancelled" && (
             <button
               type="button"
@@ -251,6 +267,199 @@ export default function Orders() {
         order={cancelTarget}
         onClose={() => setCancelTarget(null)}
       />
+      <OpenTicketModal
+        order={ticketTarget}
+        onClose={() => setTicketTarget(null)}
+      />
+    </div>
+  );
+}
+
+// Admin-initiated support ticket. Wires `orderId` so the backend
+// auto-adds the buyer + seller as participants — the single thread is
+// visible to both parties in their /support inbox. Reason + subject +
+// body live in the cancellation email + first ticket message.
+const TICKET_REASONS = [
+  "Refund / dispute",
+  "Order delay",
+  "Rule violation: off-platform contact",
+  "Rule violation: payment outside Qwlee",
+  "Quality complaint",
+  "Communication breakdown",
+  "Other",
+];
+
+const TICKET_CATEGORIES = [
+  { value: "orders", label: "Order" },
+  { value: "billing", label: "Billing" },
+  { value: "trust-safety", label: "Trust & safety" },
+  { value: "account", label: "Account" },
+  { value: "other", label: "Other" },
+];
+
+function OpenTicketModal({ order, onClose }) {
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [reason, setReason] = useState(TICKET_REASONS[0]);
+  const [category, setCategory] = useState("orders");
+  const [createTicket, { isLoading }] = useAdminCreateTicketMutation();
+
+  if (!order) return null;
+
+  async function handleSubmit() {
+    if (!subject.trim() || !body.trim()) {
+      toast.error("Subject and message are required.");
+      return;
+    }
+    const res = await createTicket({
+      orderId: order._id || order.id,
+      subject: subject.trim(),
+      body: body.trim(),
+      reason,
+      category,
+    });
+    if (res?.error) {
+      toast.error(res.error?.data?.message || "Could not open ticket");
+      return;
+    }
+    toast.success("Ticket opened — both parties have been notified.");
+    setSubject("");
+    setBody("");
+    setReason(TICKET_REASONS[0]);
+    setCategory("orders");
+    onClose();
+  }
+
+  const buyerName = order.clientId?.fullName || order.clientId?.username || "Buyer";
+  const sellerName =
+    order.freelancerId?.fullName || order.freelancerId?.username || "Seller";
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center px-4 py-6 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl bg-white rounded-2xl shadow-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="px-5 py-4 border-b border-ink-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IoHelpBuoyOutline className="w-5 h-5 text-primary-700" />
+            <h2 className="text-base font-semibold text-ink-900">
+              Open a support ticket
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-md text-ink-400 hover:bg-ink-50"
+            aria-label="Close"
+          >
+            <IoClose className="w-4 h-4" />
+          </button>
+        </header>
+
+        <div className="px-5 py-4 space-y-4">
+          <div className="rounded-lg border border-ink-200 bg-ink-50/60 p-3 text-xs">
+            <div className="font-semibold text-ink-900 truncate">
+              {order.gigId?.title || order.items?.[0]?.name || "Order"}
+            </div>
+            <div className="text-ink-600 mt-1">
+              Order #{String(order._id).slice(-8).toUpperCase()} ·{" "}
+              <strong>{buyerName}</strong> ↔ <strong>{sellerName}</strong>
+            </div>
+            <div className="text-ink-500 mt-1">
+              Both parties will be added as participants. They&rsquo;ll see
+              this ticket in their <code>/support</code> inbox and receive an
+              email immediately.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">
+                Reason
+              </label>
+              <select
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-ink-200 text-sm outline-none focus:border-primary-400 bg-white"
+              >
+                {TICKET_REASONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">
+                Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-ink-200 text-sm outline-none focus:border-primary-400 bg-white"
+              >
+                {TICKET_CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">
+              Subject
+            </label>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value.slice(0, 200))}
+              placeholder="E.g. Refund request — order delivery dispute"
+              className="w-full px-3 py-2 rounded-lg border border-ink-200 text-sm outline-none focus:border-primary-400"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">
+              Message to both parties
+            </label>
+            <textarea
+              rows={5}
+              value={body}
+              onChange={(e) => setBody(e.target.value.slice(0, 4000))}
+              placeholder="Describe what happened and what you need from each side. Both buyer and seller will see this exact message."
+              className="w-full px-3 py-2 rounded-lg border border-ink-200 text-sm outline-none focus:border-primary-400 resize-none"
+            />
+            <div className="text-right text-[11px] text-ink-400 mt-1">
+              {body.length}/4000
+            </div>
+          </div>
+        </div>
+
+        <footer className="px-5 py-3 border-t border-ink-100 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-ink-700 hover:bg-ink-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading || !subject.trim() || !body.trim()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
+          >
+            <IoHelpBuoyOutline className="w-4 h-4" />
+            {isLoading ? "Opening…" : "Open ticket"}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { MdArrowForward } from "react-icons/md";
 import BlogCard from "@/components/Blogs/BlogCard";
 import BlogCardSkeleton from "@/components/Blogs/BlogCardSkeleton";
 import { useGetAllBlogsQuery } from "@/app/redux/features/getAllBlogs";
+import { RevealStagger, RevealItem } from "@/components/common/Reveal";
 
 export default function TheLatestNewsAndBlog() {
   const { data, isLoading, isError } = useGetAllBlogsQuery();
@@ -33,11 +34,16 @@ export default function TheLatestNewsAndBlog() {
     );
   } else {
     body = (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <RevealStagger
+        gap={0.06}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+      >
         {blogs.slice(0, 4).map((item) => (
-          <BlogCard key={item._id || item.id} item={item} />
+          <RevealItem key={item._id || item.id}>
+            <BlogCard item={item} />
+          </RevealItem>
         ))}
-      </div>
+      </RevealStagger>
     );
   }
 

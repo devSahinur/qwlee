@@ -105,8 +105,39 @@ const updateStatus = catchAsync(async (req, res) => {
   }
 });
 
+// Admin opens a ticket on behalf of users (Fiverr-style mediation).
+// Accepts either { orderId } (auto-resolves buyer + seller) or an
+// explicit { participantIds: [] } array. Always admin-only.
+const adminCreateTicket = catchAsync(async (req, res) => {
+  if (!isAdmin(req)) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Admin only");
+  }
+  try {
+    const ticket = await supportService.adminCreateTicket({
+      adminId: req.user.id,
+      orderId: req.body?.orderId,
+      participantIds: req.body?.participantIds,
+      subject: req.body?.subject,
+      body: req.body?.body,
+      category: req.body?.category,
+      reason: req.body?.reason,
+    });
+    res.status(httpStatus.CREATED).json(
+      response({
+        message: "Ticket created",
+        status: "OK",
+        statusCode: httpStatus.CREATED,
+        data: { ticket },
+      })
+    );
+  } catch (err) {
+    throw new ApiError(httpStatus.BAD_REQUEST, err.message);
+  }
+});
+
 module.exports = {
   createTicket,
+  adminCreateTicket,
   listMyTickets,
   getTicket,
   postMessage,

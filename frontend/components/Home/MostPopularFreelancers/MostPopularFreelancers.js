@@ -9,6 +9,7 @@ import Image from "next/image";
 import FreelancersCard from "./FreelancersCard";
 import FreelancersCardSkeleton from "./FreelancersCardSkeleton";
 import { useGetAllUsersQuery } from "@/app/redux/features/getAllUsersApi";
+import { RevealStagger, RevealItem } from "@/components/common/Reveal";
 
 export default function MostPopularFreelancers() {
   const router = useRouter();
@@ -33,11 +34,19 @@ export default function MostPopularFreelancers() {
     );
   } else {
     body = (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5">
+      <RevealStagger
+        gap={0.05}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5"
+      >
         {freelancers.slice(0, 8).map((u) => (
-          <FreelancersCard key={u.id || u._id} data={u} />
+          // h-full on the motion wrapper so the inner card's `h-full`
+          // resolves to the grid cell height (each row stretches by
+          // default in CSS Grid).
+          <RevealItem key={u.id || u._id} className="h-full">
+            <FreelancersCard data={u} />
+          </RevealItem>
         ))}
-      </div>
+      </RevealStagger>
     );
   }
 
