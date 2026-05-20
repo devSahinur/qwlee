@@ -3,7 +3,7 @@
 // dashboard the user lands on after sign-in.
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import Swal from "sweetalert2";
 import { IoMailOutline, IoLockClosedOutline, IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
 
@@ -12,10 +12,25 @@ import Button from "../../common/Button";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // AdminRoute stashes the page the user was trying to reach into
+  // location.state.from when it bounces an unauthenticated request.
+  // Build the canonical post-login target so a deep-link survives the
+  // sign-in detour (e.g. /dashboard/orders → login → /dashboard/orders,
+  // not just /dashboard).
+  const fromState = location.state?.from;
+  const intendedPath =
+    fromState?.pathname &&
+    fromState.pathname.startsWith("/") &&
+    !fromState.pathname.startsWith("//") &&
+    fromState.pathname !== "/"
+      ? `${fromState.pathname}${fromState.search || ""}`
+      : "/dashboard";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -46,7 +61,7 @@ export default function Login() {
       }
       localStorage.setItem("token", data.data.attributes.tokens.access.token);
       localStorage.setItem("user", JSON.stringify(user));
-      navigate("/dashboard");
+      navigate(intendedPath, { replace: true });
     } catch (err) {
       Swal.fire({
         icon: "error",
