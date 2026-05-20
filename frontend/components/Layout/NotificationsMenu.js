@@ -144,11 +144,22 @@ export default function NotificationsMenu({ active = true }) {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 mt-2 w-[360px] max-w-[92vw] bg-white border border-gray-100 rounded-2xl overflow-hidden z-50"
-          style={{ boxShadow: "0 12px 36px rgba(15,23,42,0.12)" }}
+          className="absolute right-0 mt-2 w-[380px] max-w-[92vw] bg-white border border-gray-100 rounded-2xl overflow-hidden z-50 flex flex-col"
+          style={{
+            boxShadow: "0 12px 36px rgba(15,23,42,0.12)",
+            maxHeight: "min(560px, 80vh)",
+          }}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <div className="font-semibold text-gray-900">Notifications</div>
+          {/* Pinned header — doesn't scroll. */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="font-semibold text-gray-900">Notifications</div>
+              {unread > 0 && (
+                <span className="text-[10px] font-semibold bg-rose-100 text-rose-700 rounded-full px-1.5 py-0.5">
+                  {unread > 99 ? "99+" : unread} new
+                </span>
+              )}
+            </div>
             {unread > 0 && (
               <button
                 type="button"
@@ -162,7 +173,11 @@ export default function NotificationsMenu({ active = true }) {
             )}
           </div>
 
-          <div className="max-h-[60vh] overflow-y-auto">
+          {/* Scrollable list — fixed flex-1 so header + footer stay pinned. */}
+          <div
+            className="flex-1 overflow-y-auto qwlee-scroll"
+            style={{ minHeight: 0 }}
+          >
             {isFetching && items.length === 0 ? (
               <div className="px-4 py-6 text-sm text-gray-500">Loading…</div>
             ) : items.length === 0 ? (
@@ -222,15 +237,33 @@ export default function NotificationsMenu({ active = true }) {
             )}
           </div>
 
-          <div className="px-4 py-2 border-t border-gray-100 text-center">
+          {/* Pinned footer — full list link. */}
+          <div className="px-4 py-2.5 border-t border-gray-100 text-center shrink-0">
             <Link
-              href="/order"
+              href="/notifications"
               onClick={() => setOpen(false)}
-              className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
+              className="text-sm font-semibold text-emerald-700 hover:text-emerald-800"
             >
-              View all activity →
+              See all notifications →
             </Link>
           </div>
+
+          {/* Slim scrollbar styling — scoped to this panel via a class. */}
+          <style jsx>{`
+            .qwlee-scroll::-webkit-scrollbar {
+              width: 6px;
+            }
+            .qwlee-scroll::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .qwlee-scroll::-webkit-scrollbar-thumb {
+              background: #e2e8f0;
+              border-radius: 6px;
+            }
+            .qwlee-scroll::-webkit-scrollbar-thumb:hover {
+              background: #cbd5e1;
+            }
+          `}</style>
         </div>
       )}
     </div>
