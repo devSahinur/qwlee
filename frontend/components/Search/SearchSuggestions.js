@@ -301,6 +301,7 @@ export default function SearchSuggestions({
                           href={`/gig?id=${g._id || g.id}`}
                           onClick={() => {
                             pushRecent(query);
+                            trackSearch(query, { route: "/gig" });
                             setOpen(false);
                           }}
                           className="flex items-start gap-3 px-2 py-2 rounded hover:bg-gray-50"
@@ -342,6 +343,7 @@ export default function SearchSuggestions({
                           href={u.username ? `/${u.username}` : `/freelancer-details?id=${u._id || u.id}`}
                           onClick={() => {
                             pushRecent(query);
+                            trackSearch(query, { route: "/gig" });
                             setOpen(false);
                           }}
                           className="flex items-center gap-3 px-2 py-2 rounded hover:bg-gray-50"

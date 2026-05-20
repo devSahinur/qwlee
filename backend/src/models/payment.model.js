@@ -59,6 +59,12 @@ const ordersSchema = mongoose.Schema(
       requestedAt: { type: Date, default: null },
       respondedAt: { type: Date, default: null },
     },
+    // Cancellation audit trail. Populated when an admin (or buyer) cancels
+    // the order so we can answer "who cancelled this and why" months later.
+    cancellationReason: { type: String, default: "" },
+    cancelledBy: { type: mongoose.SchemaTypes.ObjectId, ref: "User", default: null },
+    cancelledAt: { type: Date, default: null },
+    cancelledFromStatus: { type: String, default: "" },
     isDeleted: {
       type: Boolean,
       default: false,

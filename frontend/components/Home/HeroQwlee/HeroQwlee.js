@@ -33,6 +33,8 @@ const ROTATING_SUGGESTIONS = [
   "Brand identity",
 ];
 
+// Fallback chips when no live trending data exists yet (fresh DB).
+// Capped at 6 to match the live-data display.
 const FALLBACK_TRENDING = [
   "Next.js",
   "UI/UX",
@@ -40,27 +42,43 @@ const FALLBACK_TRENDING = [
   "SEO",
   "Video editing",
   "AI",
-  "Copywriting",
 ];
 
 export default function HeroQwlee() {
   const router = useRouter();
-  const user = useUser();
+  // Read auth state in a client-only effect so SSR + first client paint
+  // match (cookies aren't visible during SSR). useUser() parses the
+  // cookie afresh on each call → new object identity per render, so we
+  // depend on a stable scalar (id) rather than the object reference,
+  // otherwise the effect would set state → rerender → set state forever.
+  const [user, setUser] = useState(null);
+  const currentUser = useUser();
+  const currentUserId = currentUser?.id || currentUser?._id || null;
+  useEffect(() => {
+    setUser(currentUser || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
   const [trending, setTrending] = useState(FALLBACK_TRENDING);
 
   // Pull live trending from the search log. Falls back to the seeded
   // list when the endpoint is empty (fresh DB / no traffic yet) so the
   // strip never renders blank.
+  //
+  // We over-fetch (limit=20) and then keep only queries that have been
+  // searched more than once — a single search isn't a trend, it's just
+  // noise. Final cap is 6 chips so the strip stays scannable.
   useEffect(() => {
     let cancelled = false;
-    fetch(`${base}/v1/search/trending?days=7&limit=8`)
+    fetch(`${base}/v1/search/trending?days=7&limit=20`)
       .then((r) => r.json())
       .then((res) => {
         if (cancelled) return;
-        const live = (res?.data?.attributes?.results || [])
+        const popular = (res?.data?.attributes?.results || [])
+          .filter((r) => (Number(r.count) || 0) >= 2)
           .map((r) => r.query)
-          .filter(Boolean);
-        if (live.length) setTrending(live.slice(0, 8));
+          .filter(Boolean)
+          .slice(0, 6);
+        if (popular.length) setTrending(popular);
       })
       .catch(() => {});
     return () => {

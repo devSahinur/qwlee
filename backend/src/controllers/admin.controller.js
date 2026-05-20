@@ -137,6 +137,21 @@ const unbanUser = catchAsync(async (req, res) => {
   );
 });
 
+const cancelOrder = catchAsync(async (req, res) => {
+  const result = await adminService.cancelOrder(req.params.orderId, {
+    reason: req.body?.reason,
+    adminId: req.user?.id,
+  });
+  res.status(httpStatus.OK).json(
+    response({
+      message: "Order cancelled by admin",
+      status: "OK",
+      statusCode: httpStatus.OK,
+      data: { order: result },
+    })
+  );
+});
+
 module.exports = {
   getTotalStatus,
   getIncomeRatio,
@@ -147,4 +162,5 @@ module.exports = {
   getAllGigs,
   banUser,
   unbanUser,
+  cancelOrder,
 };

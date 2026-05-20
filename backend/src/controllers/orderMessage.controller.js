@@ -119,6 +119,32 @@ const addOrderMessage = catchAsync(async (req, res, next) => {
       messageSent?._id
     );
     io.to(receiver).emit("new-order-message", newMessageData);
+
+    // If this was a delivery, ping the buyer by email — they may not
+    // be in the order page when the seller delivers.
+    if (deliveryMessage) {
+      try {
+        const emailService = require("../services/email.service");
+        const { Payment, Gig, User } = require("../models");
+        const order = await Payment.findById(orderId);
+        const [buyer, sellerUser, gig] = await Promise.all([
+          User.findById(order?.clientId).select("fullName email username"),
+          User.findById(order?.freelancerId).select("fullName email username"),
+          order?.gigId ? Gig.findById(order.gigId).select("title") : null,
+        ]);
+        if (buyer?.email) {
+          emailService.sendOrderDeliveredBuyer(buyer.email, {
+            buyerName: buyer.fullName || buyer.username,
+            sellerName: sellerUser?.fullName || sellerUser?.username,
+            gigTitle: gig?.title || "your gig",
+            orderId: order?._id,
+            message: deliveryMessage,
+          });
+        }
+      } catch (e) {
+        /* email failures don't block messaging */
+      }
+    }
     res.status(httpStatus.CREATED).json(
       response({
         message: "Order message added successfully",

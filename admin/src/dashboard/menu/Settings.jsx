@@ -23,6 +23,7 @@ import {
   useUpdateSettingsMutation,
   useAddCustomPaymentMutation,
   useRemoveCustomPaymentMutation,
+  useSendTestEmailMutation,
 } from "../../redux/api/apiSlice";
 
 import PageHeader from "../../common/PageHeader";
@@ -460,44 +461,156 @@ function SmtpTab({ config }) {
   }
 
   return (
-    <Card className="p-5 max-w-2xl">
-      <div className="flex items-start gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center">
+    <div className="space-y-5 max-w-2xl">
+      <Card className="p-5">
+        <div className="flex items-start gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-primary-50 text-primary-700 flex items-center justify-center">
+            <IoMailOutline className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-ink-900">SMTP server</h3>
+            <p className="text-xs text-ink-500 mt-0.5">
+              Used for every transactional email: signup OTP, password reset,
+              order confirmations, deliveries, reviews, withdrawals, etc.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <TextInput label="Host" value={form.host} onChange={(v) => patch("host", v)} placeholder="smtp.gmail.com" />
+          <TextInput label="Port" type="number" value={form.port} onChange={(v) => patch("port", v)} placeholder="587" />
+          <TextInput label="Username" value={form.user} onChange={(v) => patch("user", v)} />
+          <TextInput label="Password" secret value={form.pass} onChange={(v) => patch("pass", v)} />
+          <TextInput label="From email" value={form.fromEmail} onChange={(v) => patch("fromEmail", v)} placeholder="noreply@qwlee.com" />
+          <TextInput label="From name" value={form.fromName} onChange={(v) => patch("fromName", v)} placeholder="Qwlee" />
+        </div>
+
+        <div className="mt-4">
+          <Toggle
+            checked={!!form.secure}
+            onChange={(v) => patch("secure", v)}
+            label="Use TLS / SSL (port 465)"
+          />
+        </div>
+
+        <div className="flex items-center justify-end mt-5 pt-4 border-t border-ink-100">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isLoading}
+            className="px-4 py-2 rounded-lg text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
+          >
+            {isLoading ? "Saving…" : "Save SMTP"}
+          </button>
+        </div>
+      </Card>
+
+      <SmtpTester defaultEmail={form.fromEmail} />
+    </div>
+  );
+}
+
+// Test-send panel — fires any of the transactional templates through
+// the currently-saved SMTP. Helpful for confirming credentials work
+// right after editing them, without having to drive a real flow.
+const TEMPLATE_OPTIONS = [
+  { value: "verification", label: "Signup verification (OTP)" },
+  { value: "resetPassword", label: "Password reset (OTP)" },
+  { value: "orderConfirmedBuyer", label: "Order placed (buyer)" },
+  { value: "orderConfirmedSeller", label: "New order (seller)" },
+  { value: "delivered", label: "Order delivered (buyer)" },
+  { value: "accepted", label: "Delivery accepted (seller)" },
+  { value: "cancelled", label: "Order cancelled" },
+  { value: "extensionRequest", label: "Extension requested (buyer)" },
+  { value: "extensionAccepted", label: "Extension accepted (seller)" },
+  { value: "reviewReceived", label: "Review received (seller)" },
+  { value: "reviewReply", label: "Seller replied to review (buyer)" },
+  { value: "customOffer", label: "Custom offer (buyer)" },
+  { value: "newMessage", label: "New inbox message" },
+  { value: "withdrawalRequested", label: "Withdrawal requested" },
+  { value: "withdrawalApproved", label: "Withdrawal approved" },
+  { value: "withdrawalDeclined", label: "Withdrawal declined" },
+  { value: "accountBanned", label: "Account suspended" },
+  { value: "verificationApproved", label: "ID verification approved" },
+  { value: "verificationRejected", label: "ID verification rejected" },
+  { value: "all", label: "Send every template (smoke test)" },
+];
+
+function SmtpTester({ defaultEmail }) {
+  const [to, setTo] = useState("");
+  const [template, setTemplate] = useState("verification");
+  const [sendTest, { isLoading }] = useSendTestEmailMutation();
+
+  useEffect(() => {
+    if (defaultEmail && !to) setTo(defaultEmail);
+  }, [defaultEmail]);
+
+  async function handleSend() {
+    if (!to.trim()) {
+      toast.error("Enter a recipient email first");
+      return;
+    }
+    const res = await sendTest({ to: to.trim(), template });
+    if (res?.error) {
+      toast.error(res.error?.data?.message || "Send failed");
+      return;
+    }
+    toast.success(`Test email sent to ${to.trim()}`);
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
           <IoMailOutline className="w-5 h-5" />
         </div>
-        <div>
-          <h3 className="text-base font-semibold text-ink-900">SMTP server</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base font-semibold text-ink-900">
+            Send a test email
+          </h3>
           <p className="text-xs text-ink-500 mt-0.5">
-            Used for verification + password reset emails.
+            Confirm SMTP is working by sending any template to your inbox.
+            Uses the credentials saved above.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <TextInput label="Host" value={form.host} onChange={(v) => patch("host", v)} placeholder="smtp.gmail.com" />
-        <TextInput label="Port" type="number" value={form.port} onChange={(v) => patch("port", v)} placeholder="587" />
-        <TextInput label="Username" value={form.user} onChange={(v) => patch("user", v)} />
-        <TextInput label="Password" secret value={form.pass} onChange={(v) => patch("pass", v)} />
-        <TextInput label="From email" value={form.fromEmail} onChange={(v) => patch("fromEmail", v)} placeholder="noreply@qwlee.com" />
-        <TextInput label="From name" value={form.fromName} onChange={(v) => patch("fromName", v)} placeholder="Qwlee" />
-      </div>
-
-      <div className="mt-4">
-        <Toggle
-          checked={!!form.secure}
-          onChange={(v) => patch("secure", v)}
-          label="Use TLS / SSL (port 465)"
+      <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-3">
+        <TextInput
+          label="Recipient"
+          value={to}
+          onChange={setTo}
+          placeholder="you@example.com"
         />
+        <div>
+          <label className="block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">
+            Template
+          </label>
+          <select
+            value={template}
+            onChange={(e) => setTemplate(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-ink-200 text-sm outline-none focus:border-primary-400 bg-white"
+          >
+            {TEMPLATE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="flex items-center justify-end mt-5 pt-4 border-t border-ink-100">
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-ink-100">
+        <p className="text-[11px] text-ink-500">
+          Test emails use mock data — no real records are touched.
+        </p>
         <button
           type="button"
-          onClick={handleSave}
+          onClick={handleSend}
           disabled={isLoading}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60"
+          className="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
         >
-          {isLoading ? "Saving…" : "Save SMTP"}
+          {isLoading ? "Sending…" : "Send test"}
         </button>
       </div>
     </Card>

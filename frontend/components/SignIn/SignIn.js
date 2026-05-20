@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Checkbox, Input, Form } from "antd";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Cookies from "js-cookie";
 import { useDispatch } from "react-redux";
 import { toast } from "sonner";
@@ -18,11 +18,21 @@ import useIpLocation, { flagEmoji } from "@/hooks/useIpLocation";
 const SignIn = () => {
   const dispatch = useDispatch();
   const router = useRouter();
+  const params = useSearchParams();
   const ip = useIpLocation();
   // Banned users get a special 403 from the backend with the admin-set
   // reason. We surface that inline instead of as a toast so the user
   // sees the exact reason next to the form.
+  //
+  // Pre-populate from `?banned=<reason>` so the real-time logout via
+  // socket (admin clicked Ban → SocketProvider force-redirected to
+  // /sign-in) shows the same banner without needing the user to
+  // attempt a new login.
   const [banReason, setBanReason] = useState("");
+  useEffect(() => {
+    const fromUrl = params.get("banned");
+    if (fromUrl) setBanReason(decodeURIComponent(fromUrl));
+  }, [params]);
 
   const handleSubmit = async (values) => {
     setBanReason("");
@@ -42,17 +52,35 @@ const SignIn = () => {
           toast.error("Admins sign in via the admin dashboard, not here.");
           return;
         }
+        // "Keep me signed in" → 30-day persistent cookie. Otherwise we
+        // drop the `expires` option which makes the cookies session-
+        // scoped (cleared when the browser closes). Same option used
+        // for `user`, `accessToken`, and `refreshToken` so all three
+        // expire together.
+        // "Keep me signed in" → 30-day persistent cookies (refresh-token
+        // long-lived too). Unchecked → drop `expires` so the cookies are
+        // session-scoped and the user is logged out when they close the
+        // browser. localStorage (set by storeUserInfo) is always persistent;
+        // that's fine because we clear it on logout anyway.
+        const remember = !!values.remember;
+        const cookieOpts = remember ? { expires: 30 } : {};
         storeUserInfo({
           accessToken: res?.data?.attributes?.tokens?.access?.token,
         });
-        Cookies.set("user", JSON.stringify(res?.data?.attributes?.user));
+        Cookies.set(
+          "user",
+          JSON.stringify(res?.data?.attributes?.user),
+          cookieOpts
+        );
         Cookies.set(
           "accessToken",
-          JSON.stringify(res?.data?.attributes?.tokens?.access?.token)
+          JSON.stringify(res?.data?.attributes?.tokens?.access?.token),
+          cookieOpts
         );
         Cookies.set(
           "refreshToken",
-          JSON.stringify(res?.data?.attributes?.tokens?.refresh?.token)
+          JSON.stringify(res?.data?.attributes?.tokens?.refresh?.token),
+          cookieOpts
         );
         dispatch(setUser(res?.data?.attributes?.user));
         router.push("/");
@@ -111,7 +139,12 @@ const SignIn = () => {
         </div>
       )}
 
-      <Form onFinish={handleSubmit} autoComplete="on" layout="vertical">
+      <Form
+        onFinish={handleSubmit}
+        autoComplete="on"
+        layout="vertical"
+        initialValues={{ remember: true }}
+      >
         <Form.Item
           name="email"
           label="Email"
@@ -131,7 +164,13 @@ const SignIn = () => {
           />
         </Form.Item>
         <div className="flex justify-between items-center mb-3">
-          <Checkbox>Keep me signed in</Checkbox>
+          <Form.Item
+            name="remember"
+            valuePropName="checked"
+            noStyle
+          >
+            <Checkbox>Keep me signed in</Checkbox>
+          </Form.Item>
           <Link
             href="/forgot-password"
             className="text-sm text-emerald-700 hover:underline"

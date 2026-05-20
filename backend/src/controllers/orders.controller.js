@@ -10,6 +10,8 @@ const { Payment, User } = require("../models");
 const mongoose = require("mongoose");
 const messageService = require("../services/message.service");
 const notificationService = require("../services/notification.service");
+const emailService = require("../services/email.service");
+const { Gig } = require("../models");
 const orderCreate = catchAsync(async (req, res) => {
   try {
     const metadata = {
@@ -144,6 +146,29 @@ const orderPlaced = async (req, res) => {
             freelancerId,
             notificationData
           );
+        }
+
+        // Fire-and-forget email notifications to both parties. We
+        // populate fullName + email + the gig title so the templates
+        // can address each side personally.
+        try {
+          const [buyer, seller, gig] = await Promise.all([
+            clientId ? User.findById(clientId).select("fullName email username") : null,
+            freelancerId ? User.findById(freelancerId).select("fullName email username") : null,
+            session.metadata.gigId ? Gig.findById(session.metadata.gigId).select("title") : null,
+          ]);
+          const ctx = {
+            buyerName: buyer?.fullName || buyer?.username || "there",
+            sellerName: seller?.fullName || seller?.username || "your seller",
+            gigTitle: gig?.title || "your gig",
+            orderId: order._id,
+            price: sessionData.items?.[0]?.price,
+            deliveryDate: sessionData.deliveryDate,
+          };
+          if (buyer?.email) emailService.sendOrderConfirmedBuyer(buyer.email, ctx);
+          if (seller?.email) emailService.sendOrderConfirmedSeller(seller.email, ctx);
+        } catch (e) {
+          console.warn(`order-confirm email failed: ${e.message}`);
         }
         break;
       default:

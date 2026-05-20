@@ -75,6 +75,23 @@ async function review(userId, { action, reason, reviewerId }) {
   user.verification.reviewedAt = new Date();
   user.verification.reviewedBy = reviewerId;
   await user.save();
+
+  try {
+    const emailService = require("./email.service");
+    if (user.email && action === "approve") {
+      emailService.sendVerificationApproved(user.email, {
+        recipientName: user.fullName || user.username,
+      });
+    } else if (user.email && action === "reject") {
+      emailService.sendVerificationRejected(user.email, {
+        recipientName: user.fullName || user.username,
+        reason: user.verification.rejectionReason,
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
+
   return user;
 }
 

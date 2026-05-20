@@ -32,6 +32,7 @@ import EditTermCondition from "../dashboard/menu/termcondition/EditTermCondition
 import TrustSafety from "../dashboard/menu/trustsafety/TrustSafety";
 import EditTrustSafety from "../dashboard/menu/trustsafety/EditTrustSafety";
 import AdminRoute from "./AdminRoute";
+import PublicRoute from "./PublicRoute";
 import Withdraw from "../dashboard/menu/withdraw";
 import DetailWithdraw from "../dashboard/menu/DetailWithdraw";
 import Login from "../dashboard/auth/Login";
@@ -46,10 +47,39 @@ import Conversations from "../dashboard/menu/Conversations";
 import SearchLogs from "../dashboard/menu/SearchLogs";
 
 export const router = createBrowserRouter([
-  { path: "/", element: <Login />, errorElement: <ErrorPage /> },
-  { path: "forgotpassword", element: <Forgotpassword /> },
-  { path: "otp", element: <OtpVerify /> },
-  { path: "updatepassword", element: <UpdatePassword /> },
+  {
+    path: "/",
+    element: (
+      <PublicRoute>
+        <Login />
+      </PublicRoute>
+    ),
+    errorElement: <ErrorPage />,
+  },
+  {
+    path: "forgotpassword",
+    element: (
+      <PublicRoute>
+        <Forgotpassword />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: "otp",
+    element: (
+      <PublicRoute>
+        <OtpVerify />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: "updatepassword",
+    element: (
+      <PublicRoute>
+        <UpdatePassword />
+      </PublicRoute>
+    ),
+  },
   {
     path: "dashboard",
     element: (

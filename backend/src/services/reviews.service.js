@@ -1,6 +1,7 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
-const { Reviews, Orders } = require("../models");
+const { Reviews, Orders, User, Gig } = require("../models");
+const emailService = require("./email.service");
 
 // Create a review tied to a delivered order. Enforces:
 //   - the order exists and belongs to the buyer
@@ -47,6 +48,26 @@ const createReview = async (payload, userId) => {
     rating: Number(rating),
     review: String(review).trim(),
   });
+
+  // Email the seller that they got a review.
+  try {
+    const [buyer, seller, gig] = await Promise.all([
+      User.findById(userId).select("fullName email username"),
+      User.findById(order.freelancerId).select("fullName email username"),
+      order.gigId ? Gig.findById(order.gigId).select("title") : null,
+    ]);
+    if (seller?.email) {
+      emailService.sendReviewReceivedSeller(seller.email, {
+        sellerName: seller.fullName || seller.username,
+        buyerName: buyer?.fullName || buyer?.username,
+        gigTitle: gig?.title || "your gig",
+        rating: Number(rating),
+        review: String(review).trim(),
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
 
   return newReview;
 };
@@ -106,6 +127,26 @@ const replyToReview = async (reviewId, freelancerId, message) => {
 
   review.sellerReply = { message: text, repliedAt: new Date() };
   await review.save();
+
+  // Email the buyer that the seller replied.
+  try {
+    const [buyer, seller, gig] = await Promise.all([
+      User.findById(review.userId).select("fullName email username"),
+      User.findById(review.freelancerId).select("fullName email username"),
+      review.gigId ? Gig.findById(review.gigId).select("title") : null,
+    ]);
+    if (buyer?.email) {
+      emailService.sendReviewReplyBuyer(buyer.email, {
+        buyerName: buyer.fullName || buyer.username,
+        sellerName: seller?.fullName || seller?.username,
+        gigTitle: gig?.title || "your gig",
+        reply: text,
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
+
   return review;
 };
 

@@ -23,6 +23,14 @@ router.get(
 router.patch("/users/:userId/ban", auth("admin"), adminController.banUser);
 router.patch("/users/:userId/unban", auth("admin"), adminController.unbanUser);
 
+// Admin force-cancel — works on any order regardless of status. Optional
+// `reason` is shown in the cancellation email to both parties.
+router.patch(
+  "/orders/:orderId/cancel",
+  auth("admin"),
+  adminController.cancelOrder
+);
+
 // Admin search logs — every marketplace query (anonymous + authed).
 const searchController = require("../../controllers/search.controller");
 router.get("/searches", auth("admin"), searchController.list);
@@ -42,6 +50,12 @@ router.delete(
   "/settings/custom-payments/:id",
   auth("admin"),
   appConfigController.removeCustomPayment
+);
+// Email template preview — send a sample to any address.
+router.post(
+  "/settings/test-email",
+  auth("admin"),
+  appConfigController.sendTemplateSample
 );
 
 // Read-only access to platform conversations (DMs + order chats) for

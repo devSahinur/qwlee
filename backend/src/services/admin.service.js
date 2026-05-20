@@ -1,3 +1,5 @@
+const httpStatus = require("http-status");
+const ApiError = require("../utils/ApiError");
 const Gig = require("../models/gig.model");
 const Payment = require("../models/payment.model");
 const User = require("../models/user.model");
@@ -196,15 +198,112 @@ const queryAllGigs = async (filter = {}, options = {}) => {
 // out by a rogue admin action.
 const banUser = async (userId, { reason = "" } = {}) => {
   const user = await User.findById(userId);
-  if (!user) throw new Error("User not found");
-  if (user.role === "admin") throw new Error("Admins cannot be banned");
+  if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+  if (user.role === "admin")
+    throw new ApiError(httpStatus.FORBIDDEN, "Admins cannot be banned");
   user.isBan = true;
   user.banReason =
     (reason && reason.trim()) ||
     "Your account has been suspended by an administrator.";
   user.bannedAt = new Date();
   await user.save();
+
+  // Force-logout every active session for this user in real time. The
+  // socket room is keyed by userId (see socketServer.js), so emitting
+  // to that room reaches all of the user's open tabs/devices at once.
+  // The frontend's SocketProvider listens for `auth/force-logout` and
+  // clears cookies + redirects to /sign-in.
+  try {
+    const { io } = require("../socket/socketServer");
+    io.to(String(user._id)).emit("auth/force-logout", {
+      reason: user.banReason,
+      bannedAt: user.bannedAt,
+    });
+  } catch (e) {
+    /* socket emission must never block the ban itself */
+  }
+
+  try {
+    const emailService = require("./email.service");
+    if (user.email) {
+      emailService.sendAccountBanned(user.email, {
+        recipientName: user.fullName || user.username,
+        reason: user.banReason,
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
   return user;
+};
+
+// Admin force-cancel — Fiverr-support style. Works on any order
+// regardless of status. If the order was previously settled to the
+// freelancer (status === "delivered"), we claw back the
+// commission-adjusted amount from their balance so the books stay
+// consistent. Sends cancellation emails to both parties.
+const cancelOrder = async (orderId, { reason = "", adminId } = {}) => {
+  const order = await Payment.findById(orderId);
+  if (!order) throw new ApiError(httpStatus.NOT_FOUND, "Order not found");
+  if (order.status === "cancelled") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Order is already cancelled");
+  }
+
+  const wasSettled = order.status === "delivered";
+  if (wasSettled && order.freelancerId) {
+    const amount = Number(order?.items?.[0]?.price || 0);
+    const credited = amount * 0.95; // matches orders.service commission
+    if (credited > 0) {
+      await User.findByIdAndUpdate(order.freelancerId, {
+        $inc: { balance: -credited },
+      });
+    }
+  }
+
+  const prevStatus = order.status;
+  order.status = "cancelled";
+  // Stamp the cancellation source so we can distinguish admin overrides
+  // from regular buyer/seller cancellations in audits.
+  order.cancellationReason =
+    `[Admin override] ${String(reason || "").trim() || "Cancelled by admin support."}`.slice(0, 500);
+  order.cancelledBy = adminId || null;
+  order.cancelledAt = new Date();
+  order.cancelledFromStatus = prevStatus;
+  await order.save();
+
+  // Email both parties using the cancellation template. Lazy-require to
+  // avoid a circular dep with email.service.
+  try {
+    const emailService = require("./email.service");
+    const [buyer, seller, gig] = await Promise.all([
+      User.findById(order.clientId).select("fullName email username"),
+      User.findById(order.freelancerId).select("fullName email username"),
+      order.gigId
+        ? Gig.findById(order.gigId).select("title")
+        : null,
+    ]);
+    const ctx = {
+      gigTitle: gig?.title || "your gig",
+      orderId: order._id,
+      reason: order.cancellationReason,
+    };
+    if (buyer?.email) {
+      emailService.sendOrderCancelled(buyer.email, {
+        ...ctx,
+        recipientName: buyer.fullName || buyer.username,
+      });
+    }
+    if (seller?.email) {
+      emailService.sendOrderCancelled(seller.email, {
+        ...ctx,
+        recipientName: seller.fullName || seller.username,
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
+
+  return order;
 };
 
 const unbanUser = async (userId) => {
@@ -227,4 +326,5 @@ module.exports = {
   queryAllGigs,
   banUser,
   unbanUser,
+  cancelOrder,
 };

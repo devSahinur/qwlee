@@ -6,8 +6,12 @@
 // so the admin can see the full conversation context.
 
 import { useMemo, useState } from "react";
-import { IoSearch } from "react-icons/io5";
-import { useGetAdminOrdersQuery } from "../../redux/api/apiSlice";
+import { IoSearch, IoCloseCircleOutline, IoClose } from "react-icons/io5";
+import toast from "react-hot-toast";
+import {
+  useGetAdminOrdersQuery,
+  useAdminCancelOrderMutation,
+} from "../../redux/api/apiSlice";
 
 import PageHeader from "../../common/PageHeader";
 import DataTable from "../../common/DataTable";
@@ -37,6 +41,7 @@ export default function Orders() {
   const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [cancelTarget, setCancelTarget] = useState(null);
 
   const { data, isFetching } = useGetAdminOrdersQuery({});
   const rows = data?.data?.attributes?.results || [];
@@ -143,14 +148,27 @@ export default function Orders() {
       key: "action",
       label: "",
       render: (r) => (
-        <a
-          href={`http://localhost:8000/order/${r._id}`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-medium text-primary-700 hover:text-primary-800"
-        >
-          Open →
-        </a>
+        <div className="flex items-center gap-3 justify-end">
+          {r.status !== "cancelled" && (
+            <button
+              type="button"
+              onClick={() => setCancelTarget(r)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700"
+              title="Cancel this order"
+            >
+              <IoCloseCircleOutline className="w-3.5 h-3.5" />
+              Cancel
+            </button>
+          )}
+          <a
+            href={`http://localhost:8000/order/${r._id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-medium text-primary-700 hover:text-primary-800"
+          >
+            Open →
+          </a>
+        </div>
       ),
     },
   ];
@@ -228,6 +246,127 @@ export default function Orders() {
           </Button>
         </div>
       )}
+
+      <CancelOrderModal
+        order={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+      />
+    </div>
+  );
+}
+
+// Confirm-with-reason dialog for the admin force-cancel action. Fiverr
+// shows the reason in the cancellation email to both parties, so we
+// require it here too.
+function CancelOrderModal({ order, onClose }) {
+  const [reason, setReason] = useState("");
+  const [cancelOrder, { isLoading }] = useAdminCancelOrderMutation();
+
+  if (!order) return null;
+
+  async function handleConfirm() {
+    if (!reason.trim()) {
+      toast.error("Please provide a reason for cancellation.");
+      return;
+    }
+    const res = await cancelOrder({
+      orderId: order._id || order.id,
+      reason: reason.trim(),
+    });
+    if (res?.error) {
+      toast.error(res.error?.data?.message || "Could not cancel order");
+      return;
+    }
+    toast.success("Order cancelled. Both parties have been notified.");
+    setReason("");
+    onClose();
+  }
+
+  const wasDelivered = order.status === "delivered";
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center px-4 py-6 bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="px-5 py-4 border-b border-ink-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IoCloseCircleOutline className="w-5 h-5 text-rose-600" />
+            <h2 className="text-base font-semibold text-ink-900">
+              Cancel this order?
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-md text-ink-400 hover:bg-ink-50"
+            aria-label="Close"
+          >
+            <IoClose className="w-4 h-4" />
+          </button>
+        </header>
+
+        <div className="px-5 py-4 space-y-4">
+          <div className="text-sm text-ink-700">
+            <div className="text-ink-900 font-medium truncate">
+              {order.gigId?.title || order.items?.[0]?.name || "Order"}
+            </div>
+            <div className="text-xs text-ink-500 mt-0.5">
+              #{String(order._id).slice(-8).toUpperCase()} &middot;{" "}
+              {STATUS_LABEL[order.status] || order.status} &middot;{" "}
+              {formatMoney(order.items?.[0]?.price || order.price)}
+            </div>
+          </div>
+
+          {wasDelivered && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900">
+              <strong>Note:</strong> this order was already delivered and the
+              seller&rsquo;s balance was credited. Cancelling will deduct the
+              previously-credited amount from their balance.
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1.5">
+              Reason for cancellation
+            </label>
+            <textarea
+              rows={4}
+              value={reason}
+              onChange={(e) => setReason(e.target.value.slice(0, 500))}
+              placeholder="Why is this order being cancelled? This will be shown to both the buyer and seller."
+              className="w-full px-3 py-2 rounded-lg border border-ink-200 text-sm outline-none focus:border-primary-400 resize-none"
+              autoFocus
+            />
+            <div className="text-right text-[11px] text-ink-400 mt-1">
+              {reason.length}/500
+            </div>
+          </div>
+        </div>
+
+        <footer className="px-5 py-3 border-t border-ink-100 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-ink-700 hover:bg-ink-100"
+          >
+            Keep order
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={isLoading || !reason.trim()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-60"
+          >
+            <IoCloseCircleOutline className="w-4 h-4" />
+            {isLoading ? "Cancelling…" : "Cancel order"}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 }

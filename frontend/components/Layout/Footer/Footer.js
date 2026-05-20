@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   FaFacebookF,
@@ -49,12 +49,21 @@ const SOCIAL = [
 
 export default function Footer() {
   const router = useRouter();
-  const user = useUser();
+  const currentUser = useUser();
+  // Auth state in a client effect — SSR doesn't see cookies, so reading
+  // useUser() directly at render flips the "Become a seller" label
+  // between server and client paint and triggers a hydration warning.
+  // Depend on a stable scalar id; useUser() returns a fresh object per
+  // render (re-parses the cookie), so depending on the object reference
+  // would loop the effect forever.
+  const [user, setUser] = useState(null);
+  const currentUserId = currentUser?.id || currentUser?._id || null;
+  useEffect(() => {
+    setUser(currentUser || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
   const [email, setEmail] = useState("");
 
-  // "Become a seller" routes to signup for guests, but to the seller
-  // dashboard's gig-creation flow for signed-in users (they already
-  // have an account — no point sending them back to /sign-up).
   const MARKETPLACE = [
     ...MARKETPLACE_BASE,
     user

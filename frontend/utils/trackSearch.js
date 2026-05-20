@@ -2,15 +2,17 @@
 // query + IP-detected country snapshot, so the admin can see who's
 // searching for what (anonymously or signed-in).
 //
-// Throttled per (query, route) tuple to one event per 4s so a debounced
-// search input doesn't flood the log on every keystroke.
+// Throttled per (query, route) tuple to one event per 1.5s so a debounced
+// search input doesn't flood the log on every keystroke. The window is
+// short enough that legitimate re-searches (user clicks Search twice
+// after editing the query) still get captured.
 
 import Cookies from "js-cookie";
 import { base } from "@/lib/constant";
 
 const KEY = "qwlee:iploc";
 const recent = new Map();
-const WINDOW_MS = 4000;
+const WINDOW_MS = 1500;
 
 function readLocation() {
   if (typeof window === "undefined") return null;

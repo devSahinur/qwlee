@@ -5,6 +5,8 @@ const User = require("../models/user.model");
 const Payment = require("../models/payment.model");
 const Orders = require("../models/orders.model");
 const { addCustomNotification } = require("./notification.service");
+const emailService = require("./email.service");
+const Gig = require("../models/gig.model");
 
 const STATUS_KEYS = ["active", "late", "delivered", "cancelled"];
 
@@ -117,8 +119,54 @@ const orderModify = async (paymentId, body, userId) => {
     throw new ApiError(httpStatus.NOT_FOUND, "Order not found");
   }
 
+  const prevStatus = order.status;
   Object.assign(order, body);
   await order.save();
+
+  // Email side-effects on a state transition. Wrapped in try/catch so a
+  // template / SMTP hiccup never breaks the order update itself.
+  if (prevStatus !== order.status) {
+    try {
+      const [buyer, seller, gig] = await Promise.all([
+        User.findById(order.clientId).select("fullName email username"),
+        User.findById(order.freelancerId).select("fullName email username"),
+        order.gigId ? Gig.findById(order.gigId).select("title") : null,
+      ]);
+      const ctx = {
+        buyerName: buyer?.fullName || buyer?.username,
+        sellerName: seller?.fullName || seller?.username,
+        gigTitle: gig?.title || "your gig",
+        orderId: order._id,
+        price: order?.items?.[0]?.price,
+      };
+      if (order.status === "delivered" && seller?.email) {
+        // status "delivered" in this app = buyer accepted (orderModify
+        // is the path that sets it); the seller therefore gets paid.
+        emailService.sendDeliveryAcceptedSeller(seller.email, {
+          ...ctx,
+          buyerName: ctx.buyerName,
+        });
+      }
+      if (order.status === "cancelled") {
+        if (buyer?.email)
+          emailService.sendOrderCancelled(buyer.email, {
+            recipientName: ctx.buyerName,
+            gigTitle: ctx.gigTitle,
+            orderId: ctx.orderId,
+            reason: body.reason,
+          });
+        if (seller?.email)
+          emailService.sendOrderCancelled(seller.email, {
+            recipientName: ctx.sellerName,
+            gigTitle: ctx.gigTitle,
+            orderId: ctx.orderId,
+            reason: body.reason,
+          });
+      }
+    } catch (e) {
+      /* swallow */
+    }
+  }
 
   if (order.status === "delivered") {
     // Calculate the amount after deducting the 5% commission
@@ -215,6 +263,27 @@ const requestExtension = async (orderId, sellerId, { newDeliveryDate, reason }) 
     },
   });
 
+  // Email the buyer asynchronously.
+  try {
+    const [buyer, seller, gig] = await Promise.all([
+      User.findById(order.clientId).select("fullName email username"),
+      User.findById(order.freelancerId).select("fullName email username"),
+      order.gigId ? Gig.findById(order.gigId).select("title") : null,
+    ]);
+    if (buyer?.email) {
+      emailService.sendExtensionRequestedBuyer(buyer.email, {
+        buyerName: buyer.fullName || buyer.username,
+        sellerName: seller?.fullName || seller?.username,
+        gigTitle: gig?.title || "your gig",
+        orderId: order._id,
+        newDeliveryDate: target,
+        reason: order.extensionRequest.reason,
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
+
   return { order, message: msg };
 };
 
@@ -268,6 +337,27 @@ const respondExtension = async (orderId, buyerId, { action }) => {
       },
     },
   });
+
+  // Email the seller asynchronously.
+  try {
+    const [buyer, seller, gig] = await Promise.all([
+      User.findById(order.clientId).select("fullName email username"),
+      User.findById(order.freelancerId).select("fullName email username"),
+      order.gigId ? Gig.findById(order.gigId).select("title") : null,
+    ]);
+    if (seller?.email) {
+      emailService.sendExtensionResponseSeller(seller.email, {
+        sellerName: seller.fullName || seller.username,
+        buyerName: buyer?.fullName || buyer?.username,
+        gigTitle: gig?.title || "your gig",
+        orderId: order._id,
+        accepted: action === "accept",
+        newDeliveryDate: target,
+      });
+    }
+  } catch (e) {
+    /* swallow */
+  }
 
   return { order, message: msg };
 };

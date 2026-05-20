@@ -62,6 +62,32 @@ export const SocketProvider = ({ children }) => {
         console.log(`Socket disconnected: ${reason}`);
       }
     });
+
+    // Admin-initiated force-logout — fires when /admin/users/:id/ban is
+    // hit. Clear every auth artefact and bounce to /sign-in so the
+    // banned user can't keep using the tab they had open.
+    next.on("auth/force-logout", (payload = {}) => {
+      try {
+        Cookies.remove("user");
+        Cookies.remove("accessToken");
+        Cookies.remove("refreshToken");
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("accessToken");
+          window.localStorage.removeItem("user");
+          // Carry the ban reason through one redirect hop so /sign-in
+          // shows the same "Your account has been suspended" banner the
+          // server already serves on a fresh login attempt.
+          const reason = encodeURIComponent(
+            payload?.reason || "Your account has been suspended."
+          );
+          window.location.replace(`/sign-in?banned=${reason}`);
+        }
+      } catch (e) {
+        /* even if cleanup hiccups, navigate away */
+        if (typeof window !== "undefined") window.location.replace("/sign-in");
+      }
+    });
+
     setSocket(next);
     return () => {
       next.removeAllListeners();

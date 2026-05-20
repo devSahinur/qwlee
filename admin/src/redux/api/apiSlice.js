@@ -443,6 +443,22 @@ updateSupportStatus: builder.mutation({
   ],
 }),
 
+// Admin force-cancel order — Fiverr-style support override. Works on any
+// order regardless of status. Optional `reason` is shown in the
+// cancellation email to both parties and stored on the order for audit.
+adminCancelOrder: builder.mutation({
+  query: ({ orderId, reason }) => ({
+    url: `/admin/orders/${orderId}/cancel`,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { reason },
+  }),
+  invalidatesTags: ["orders"],
+}),
+
 // Ban / unban — both invalidate the users list so the row reflects
 // the new state immediately.
 banUser: builder.mutation({
@@ -508,6 +524,17 @@ removeCustomPayment: builder.mutation({
     headers: { authorization: `Bearer ${localStorage.getItem("token")}` },
   }),
   invalidatesTags: ["settings"],
+}),
+sendTestEmail: builder.mutation({
+  query: ({ to, template = "verification" }) => ({
+    url: `/admin/settings/test-email`,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: { to, template },
+  }),
 }),
 
 // Search-log monitoring — paginated table + headline stats.
@@ -722,5 +749,7 @@ updateProfielPicture: builder.mutation({
       useUpdateSettingsMutation,
       useAddCustomPaymentMutation,
       useRemoveCustomPaymentMutation,
+      useSendTestEmailMutation,
+      useAdminCancelOrderMutation,
 
  } = apiSlice;

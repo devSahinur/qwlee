@@ -3,6 +3,7 @@ const ApiError = require("../utils/ApiError");
 const logger = require("../config/logger");
 const { userService } = require(".");
 const { addCustomNotification } = require("./notification.service");
+const emailService = require("./email.service");
 const { Withdrawal } = require("../models");
 
 const createWithdrawal = async (userId, body) => {
@@ -43,6 +44,15 @@ const createWithdrawal = async (userId, body) => {
     newNotificationAdmin
   );
 
+  if (user.email) {
+    emailService.sendWithdrawalRequested(user.email, {
+      recipientName: user.fullName || user.username,
+      amount: body.withdrawalAmount,
+      bankName: body.bankName,
+      accountNumber: body.accountNumber,
+    });
+  }
+
   return { withdrawal, user };
 };
 
@@ -74,6 +84,15 @@ const withdrawalCancel = async (withdrawalId) => {
   user.balance = user.balance + withdrawal.withdrawalAmount;
   await user.save();
   await withdrawal.save();
+
+  if (user.email) {
+    emailService.sendWithdrawalDeclined(user.email, {
+      recipientName: user.fullName || user.username,
+      amount: withdrawal.withdrawalAmount,
+      reason: withdrawal.cancelReason || "",
+    });
+  }
+
   return withdrawal;
 };
 
@@ -130,6 +149,15 @@ const withdrawalApprove = async (withdrawalId) => {
   );
   withdrawal.status = "Completed";
   await withdrawal.save();
+
+  if (user.email) {
+    emailService.sendWithdrawalApproved(user.email, {
+      recipientName: user.fullName || user.username,
+      amount: withdrawal.withdrawalAmount,
+      bankName: withdrawal.bankName,
+    });
+  }
+
   return withdrawal;
 };
 
