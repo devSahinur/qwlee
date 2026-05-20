@@ -20,6 +20,7 @@ const getAllReviewApi = baseApi.injectEndpoints({
           method: "GET",
         };
       },
+      providesTags: ["GigReviews"],
     }),
   }),
 });

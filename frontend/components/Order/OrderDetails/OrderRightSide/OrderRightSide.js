@@ -22,8 +22,11 @@ import {
   useUpdateBuyerOrderStatusMutation,
 } from "@/app/redux/features/order/buyerOrderApi";
 import { useSendOrderMessageMutation } from "@/app/redux/features/orderMessage/orderMessage.api";
+import { useGetReviewByOrderQuery } from "@/app/redux/features/reviewsApi";
 import DeliverNowModal from "./DeliveryModal";
 import ExtendDeliveryDateModal from "./ExtendDeliveryDateModal";
+import LeaveReviewModal from "./LeaveReviewModal";
+import { IoStar } from "react-icons/io5";
 
 export default function OrderActions({ order, orderId, isSeller }) {
   const router = useRouter();
@@ -34,10 +37,17 @@ export default function OrderActions({ order, orderId, isSeller }) {
   // dedupes; this won't fire a second network request).
   useGetBuyerOrderDetailsQuery(orderId, { skip: !orderId });
 
+  // Has the buyer already reviewed this order? Drives the
+  // Leave-vs-Your-review UI in the buyer action panel.
+  const { data: myReview } = useGetReviewByOrderQuery(orderId, {
+    skip: !orderId || isSeller,
+  });
+
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isLate, setIsLate] = useState(false);
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [extendOpen, setExtendOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const calc = useCallback(() => {
     const target = moment(order?.deliveryDate);
@@ -176,15 +186,56 @@ export default function OrderActions({ order, orderId, isSeller }) {
       </section>
 
       {/* Buyer actions */}
-      {!isSeller && status === "delivered" && (
+      {!isSeller && status === "delivered" && !myReview && (
         <section className="bg-white border border-gray-200 rounded-2xl p-5 space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+            Rate your experience
+          </h3>
+          <p className="text-xs text-gray-500">
+            Help future buyers — leave a review for this delivery.
+          </p>
           <button
             type="button"
-            onClick={() => router.push(`/gig/${order?.gigId?.slug || order?.gigId?._id}#review`)}
+            onClick={() => setReviewOpen(true)}
             className="w-full px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700"
           >
             Leave a review
           </button>
+        </section>
+      )}
+      {!isSeller && myReview && (
+        <section className="bg-white border border-gray-200 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+            Your review
+          </h3>
+          <div className="mt-2 flex items-center gap-1 text-sm">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <IoStar
+                key={i}
+                className={
+                  i < Math.round(Number(myReview.rating || 0))
+                    ? "text-amber-500"
+                    : "text-gray-200"
+                }
+              />
+            ))}
+            <span className="ml-1 font-medium text-gray-900">
+              {Number(myReview.rating || 0).toFixed(1)}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-gray-700 leading-relaxed line-clamp-4">
+            “{myReview.review}”
+          </p>
+          {myReview.sellerReply?.message ? (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                Seller&apos;s response
+              </div>
+              <p className="mt-1 text-sm text-gray-700 leading-relaxed line-clamp-4">
+                {myReview.sellerReply.message}
+              </p>
+            </div>
+          ) : null}
         </section>
       )}
       {!isSeller && (status === "active" || status === "late") && (
@@ -209,6 +260,11 @@ export default function OrderActions({ order, orderId, isSeller }) {
         onClose={() => setExtendOpen(false)}
         onSubmit={async () => setExtendOpen(false)}
         originalDeliveryDate={formattedDelivery}
+      />
+      <LeaveReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        order={order}
       />
     </div>
   );
