@@ -159,6 +159,119 @@ const orderModify = async (paymentId, body, userId) => {
   return order;
 };
 
+// Seller requests a delivery-date extension. Posts a system message
+// into the order chat so the buyer sees Accept/Decline in context.
+const requestExtension = async (orderId, sellerId, { newDeliveryDate, reason }) => {
+  const order = await Payment.findById(orderId);
+  if (!order) throw new ApiError(httpStatus.NOT_FOUND, "Order not found");
+  if (String(order.freelancerId) !== String(sellerId)) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only the seller can request an extension");
+  }
+  if (!["active", "late"].includes(order.status)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "Order is not in a state that allows extension");
+  }
+  const target = new Date(newDeliveryDate);
+  if (!newDeliveryDate || Number.isNaN(target.getTime())) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "newDeliveryDate is required");
+  }
+  if (target <= new Date(order.deliveryDate)) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "The new delivery date must be after the original date"
+    );
+  }
+  if (order.extensionRequest?.status === "pending") {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      "An extension request is already pending — wait for the buyer to respond"
+    );
+  }
+
+  order.extensionRequest = {
+    newDeliveryDate: target,
+    reason: String(reason || "").trim().slice(0, 1000),
+    status: "pending",
+    requestedAt: new Date(),
+    respondedAt: null,
+  };
+  await order.save();
+
+  // Drop a system bubble into the order chat. Lazy-require to avoid a
+  // circular import with the orderMessage service.
+  const orderMessageService = require("./orderMessage.service");
+  const msg = await orderMessageService.addOrderMessage({
+    orderId,
+    sender: order.freelancerId,
+    receiver: order.clientId,
+    content: {
+      messageType: "extensionRequest",
+      message: `Extension requested → new delivery ${target.toDateString()}`,
+      extensionDetails: {
+        newDeliveryDate: target,
+        originalDeliveryDate: order.deliveryDate,
+        reason: order.extensionRequest.reason,
+        status: "pending",
+      },
+    },
+  });
+
+  return { order, message: msg };
+};
+
+// Buyer accepts or declines the seller's extension request. On accept
+// we move the order's `deliveryDate`; on decline we keep the original.
+// Either way we mark the request resolved and post a system message
+// so the chat thread reflects the outcome.
+const respondExtension = async (orderId, buyerId, { action }) => {
+  if (!["accept", "decline"].includes(action)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "action must be 'accept' or 'decline'");
+  }
+  const order = await Payment.findById(orderId);
+  if (!order) throw new ApiError(httpStatus.NOT_FOUND, "Order not found");
+  if (String(order.clientId) !== String(buyerId)) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Only the buyer can respond to this request");
+  }
+  if (order.extensionRequest?.status !== "pending") {
+    throw new ApiError(httpStatus.BAD_REQUEST, "No pending extension to respond to");
+  }
+
+  const target = new Date(order.extensionRequest.newDeliveryDate);
+  if (action === "accept") {
+    order.deliveryDate = target;
+    order.extensionRequest.status = "accepted";
+    // If the order had drifted to "late", the new date may put it back
+    // in the "active" window. Recompute lazily.
+    if (order.status === "late" && target > new Date()) {
+      order.status = "active";
+    }
+  } else {
+    order.extensionRequest.status = "declined";
+  }
+  order.extensionRequest.respondedAt = new Date();
+  await order.save();
+
+  const orderMessageService = require("./orderMessage.service");
+  const msg = await orderMessageService.addOrderMessage({
+    orderId,
+    sender: order.clientId,
+    receiver: order.freelancerId,
+    content: {
+      messageType: "extensionResponse",
+      message:
+        action === "accept"
+          ? `Extension accepted → new delivery ${target.toDateString()}`
+          : "Extension declined",
+      extensionDetails: {
+        newDeliveryDate: target,
+        status: order.extensionRequest.status,
+        respondedAt: order.extensionRequest.respondedAt,
+      },
+    },
+  });
+
+  return { order, message: msg };
+};
+
 module.exports = {
   orderCreate,
   getOrders,
@@ -168,4 +281,6 @@ module.exports = {
   orderModify,
   freelancerOrdersList,
   getOrderCounts,
+  requestExtension,
+  respondExtension,
 };

@@ -5,16 +5,29 @@
 // (own bubble + "Accept delivery" CTA for the buyer).
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import moment from "moment";
 import { Image as AntdImage } from "antd";
 import { toast } from "sonner";
 import { FaXmark } from "react-icons/fa6";
-import { IoSend, IoAttach, IoCheckmarkDone } from "react-icons/io5";
+import {
+  IoSend,
+  IoAttach,
+  IoCheckmarkDone,
+  IoCalendarOutline,
+  IoLockClosedOutline,
+  IoChatbubblesOutline,
+  IoArrowForwardOutline,
+} from "react-icons/io5";
 
 import {
   useGetOrderMessageQuery,
   useSendOrderMessageMutation,
 } from "@/app/redux/features/orderMessage/orderMessage.api";
-import { useUpdateBuyerOrderStatusMutation } from "@/app/redux/features/order/buyerOrderApi";
+import {
+  useUpdateBuyerOrderStatusMutation,
+  useRespondOrderExtensionMutation,
+} from "@/app/redux/features/order/buyerOrderApi";
 import { useSocket } from "@/components/Context/SocketProvider";
 import useUser from "@/hooks/useUser";
 import formatTimestampMessage from "@/utils/formatTimestamp";
@@ -29,6 +42,8 @@ export default function Activity({ order, orderId }) {
   });
   const [sendOrderMessage, { isLoading: sending }] = useSendOrderMessageMutation();
   const [updateOrder] = useUpdateBuyerOrderStatusMutation();
+  const [respondExtension, { isLoading: extResponding }] =
+    useRespondOrderExtensionMutation();
 
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -100,6 +115,25 @@ export default function Activity({ order, orderId }) {
     else toast.success("Delivery accepted");
   }
 
+  async function handleExtensionResponse(action) {
+    const res = await respondExtension({ orderId, action });
+    if (res?.error) {
+      toast.error(res.error?.data?.message || "Couldn't respond");
+      return;
+    }
+    toast.success(
+      action === "accept" ? "Extension accepted" : "Extension declined"
+    );
+  }
+
+  // After delivery accept or cancellation, the order chat is read-only.
+  // Buyers/sellers continue the conversation in the main inbox so the
+  // thread isn't fragmented across pages.
+  const isClosed = order?.status === "delivered" || order?.status === "cancelled";
+  const counterparty = isSeller ? order?.clientId : order?.freelancerId;
+  const counterpartyName =
+    counterparty?.fullName || counterparty?.username || "the other party";
+
   return (
     <div className="flex flex-col">
       <div className="px-5 py-3 bg-emerald-50/60 border-b border-emerald-100 text-sm text-emerald-800">
@@ -121,54 +155,100 @@ export default function Activity({ order, orderId }) {
               mine={mine}
               isSeller={isSeller}
               orderStatus={order?.status}
+              extensionStatus={order?.extensionRequest?.status}
               onAcceptDelivery={handleAcceptDelivery}
+              onRespondExtension={handleExtensionResponse}
+              extResponding={extResponding}
             />
           );
         })}
         <div ref={bottomRef} />
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-gray-100 px-5 py-4 bg-gray-50/40">
-        <textarea
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Write a message…"
-          rows={3}
-          className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-emerald-500 text-sm resize-none"
-        />
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {attachments.map((file, i) => (
-              <AttachmentPreview key={i} file={file} onRemove={() => removeAttachment(i)} />
-            ))}
+      {/* Composer — locked once the order is delivered or cancelled.
+          We surface a CTA into the main inbox so the conversation
+          continues in one canonical place. */}
+      {isClosed ? (
+        <div className="border-t border-gray-100 px-5 py-5 bg-gray-50/40">
+          <div className="flex items-start gap-3 rounded-xl bg-white border border-gray-200 p-4">
+            <div className="w-9 h-9 rounded-lg bg-gray-100 text-gray-600 flex items-center justify-center shrink-0">
+              <IoLockClosedOutline className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-gray-900">
+                Order chat is closed
+              </div>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                {order?.status === "delivered"
+                  ? "This delivery has been accepted. Continue the conversation with " +
+                    counterpartyName +
+                    " in your inbox."
+                  : "This order was cancelled. You can still message " +
+                    counterpartyName +
+                    " in your inbox."}
+              </p>
+            </div>
+            <Link
+              href="/inbox"
+              className="inline-flex items-center gap-1.5 shrink-0 px-3.5 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition"
+            >
+              <IoChatbubblesOutline className="w-4 h-4" />
+              Go to inbox
+              <IoArrowForwardOutline className="w-3.5 h-3.5" />
+            </Link>
           </div>
-        )}
-        <div className="flex items-center justify-between mt-3">
-          <label
-            htmlFor="order-msg-attach"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg cursor-pointer hover:bg-white"
-          >
-            <IoAttach />
-            Attach files
-          </label>
-          <input id="order-msg-attach" type="file" multiple className="hidden" onChange={handleFile} />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={sending || (!newMessage.trim() && attachments.length === 0)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-          >
-            <IoSend />
-            {sending ? "Sending…" : "Send"}
-          </button>
         </div>
-      </div>
+      ) : (
+        <div className="border-t border-gray-100 px-5 py-4 bg-gray-50/40">
+          <textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Write a message…"
+            rows={3}
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-emerald-500 text-sm resize-none"
+          />
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {attachments.map((file, i) => (
+                <AttachmentPreview key={i} file={file} onRemove={() => removeAttachment(i)} />
+              ))}
+            </div>
+          )}
+          <div className="flex items-center justify-between mt-3">
+            <label
+              htmlFor="order-msg-attach"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-200 rounded-lg cursor-pointer hover:bg-white"
+            >
+              <IoAttach />
+              Attach files
+            </label>
+            <input id="order-msg-attach" type="file" multiple className="hidden" onChange={handleFile} />
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={sending || (!newMessage.trim() && attachments.length === 0)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <IoSend />
+              {sending ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function MessageBubble({ message, mine, isSeller, orderStatus, onAcceptDelivery }) {
+function MessageBubble({
+  message,
+  mine,
+  isSeller,
+  orderStatus,
+  extensionStatus,
+  onAcceptDelivery,
+  onRespondExtension,
+  extResponding,
+}) {
   const sender = message?.sender || {};
   const stamp = formatTimestampMessage(message?.createdAt);
   const content = message?.content || {};
@@ -176,7 +256,10 @@ function MessageBubble({ message, mine, isSeller, orderStatus, onAcceptDelivery 
   const text = content?.message;
   const files = Array.isArray(content?.files) ? content.files : [];
   const delivery = content?.deliveryDetails;
+  const extension = content?.extensionDetails;
   const isDelivery = messageType === "deliveryMessage" || (delivery && delivery.message);
+  const isExtensionRequest = messageType === "extensionRequest";
+  const isExtensionResponse = messageType === "extensionResponse";
 
   return (
     <div className={`flex gap-2.5 ${mine ? "flex-row-reverse" : ""}`}>
@@ -197,6 +280,17 @@ function MessageBubble({ message, mine, isSeller, orderStatus, onAcceptDelivery 
             orderStatus={orderStatus}
             onAcceptDelivery={onAcceptDelivery}
           />
+        ) : isExtensionRequest ? (
+          <ExtensionRequestCard
+            extension={extension}
+            mine={mine}
+            isSeller={isSeller}
+            currentStatus={extensionStatus}
+            onRespond={onRespondExtension}
+            disabled={extResponding}
+          />
+        ) : isExtensionResponse ? (
+          <ExtensionResponseCard extension={extension} />
         ) : (
           <div
             className={`px-3.5 py-2.5 rounded-2xl text-sm whitespace-pre-line ${
@@ -210,6 +304,94 @@ function MessageBubble({ message, mine, isSeller, orderStatus, onAcceptDelivery 
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ExtensionRequestCard({ extension, mine, isSeller, currentStatus, onRespond, disabled }) {
+  const newDate = extension?.newDeliveryDate
+    ? moment(extension.newDeliveryDate).format("D MMM YYYY")
+    : "—";
+  // currentStatus reflects the live state on the order; older system
+  // messages keep showing as resolved once the buyer responds.
+  const resolved = currentStatus && currentStatus !== "pending";
+  return (
+    <div
+      className={`rounded-2xl border p-4 max-w-md ${
+        mine ? "bg-amber-50/60 border-amber-200" : "bg-white border-amber-200"
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+          <IoCalendarOutline className="w-3 h-3" />
+          Extension request
+        </span>
+        {resolved && (
+          <span
+            className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${
+              currentStatus === "accepted"
+                ? "text-emerald-700 bg-emerald-100"
+                : "text-rose-700 bg-rose-100"
+            }`}
+          >
+            {currentStatus === "accepted" ? "Accepted" : "Declined"}
+          </span>
+        )}
+      </div>
+      <p className="text-sm text-gray-800">
+        New delivery date: <strong>{newDate}</strong>
+      </p>
+      {extension?.reason ? (
+        <p className="mt-1.5 text-sm text-gray-700 italic line-clamp-5">
+          “{extension.reason}”
+        </p>
+      ) : null}
+      {!isSeller && !resolved && (
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onRespond?.("accept")}
+            className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
+          >
+            Accept
+          </button>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onRespond?.("decline")}
+            className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-300 text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+          >
+            Decline
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExtensionResponseCard({ extension }) {
+  const accepted = extension?.status === "accepted";
+  const newDate = extension?.newDeliveryDate
+    ? moment(extension.newDeliveryDate).format("D MMM YYYY")
+    : null;
+  return (
+    <div
+      className={`rounded-2xl border px-4 py-3 max-w-md text-sm ${
+        accepted
+          ? "bg-emerald-50/60 border-emerald-200 text-emerald-800"
+          : "bg-rose-50/60 border-rose-200 text-rose-800"
+      }`}
+    >
+      <div className="flex items-center gap-2">
+        <IoCalendarOutline />
+        <span className="font-semibold">
+          {accepted ? "Extension accepted" : "Extension declined"}
+        </span>
+      </div>
+      {accepted && newDate && (
+        <p className="text-xs mt-1">New delivery date: {newDate}</p>
+      )}
     </div>
   );
 }

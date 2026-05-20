@@ -293,10 +293,44 @@ const myTotalIncome = catchAsync(async (req, res) => {
   });
 });
 
+const requestExtension = catchAsync(async (req, res) => {
+  const result = await ordersService.requestExtension(
+    req.params.orderId,
+    req.user.id,
+    req.body
+  );
+  res.status(httpStatus.CREATED).json(
+    response({
+      message: "Extension requested",
+      status: "OK",
+      statusCode: httpStatus.CREATED,
+      data: result,
+    })
+  );
+});
+
+const respondExtension = catchAsync(async (req, res) => {
+  const result = await ordersService.respondExtension(
+    req.params.orderId,
+    req.user.id,
+    req.body
+  );
+  res.status(httpStatus.OK).json(
+    response({
+      message: "Extension response recorded",
+      status: "OK",
+      statusCode: httpStatus.OK,
+      data: result,
+    })
+  );
+});
+
 module.exports = {
   orderCreate,
   getOrders,
   createOrderRequest,
+  requestExtension,
+  respondExtension,
   orderPlaced,
   getMyOrders,
   orderModify,

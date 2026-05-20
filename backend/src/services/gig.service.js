@@ -1,6 +1,18 @@
 const httpStatus = require("http-status");
 const ApiError = require("../utils/ApiError");
-const { Gig } = require("../models");
+const { Gig, User } = require("../models");
+
+// Fiverr-style seller level thresholds. The frontend filter sends a
+// short identifier (`new`, `level1`, `level2`, `topRated`) and we
+// translate to a (minRating, minReviews, verifiedOnly?) tuple. Tuned
+// to the seeded dataset's review distribution so the filters return
+// non-empty results.
+const LEVEL_RULES = {
+  new: { maxReviews: 1 },
+  level1: { minRating: 4.0, minReviews: 2 },
+  level2: { minRating: 4.5, minReviews: 2 },
+  topRated: { minRating: 4.8, minReviews: 2 },
+};
 
 const createGig = async (data) => {
   const oldGig = await Gig.findOne({ slug: data.slug });
@@ -15,16 +27,15 @@ const createGig = async (data) => {
 };
 
 const queryGigs = async (filter, options, { excludeUserId } = {}) => {
-
-  // price comparison
+  // Price range
   if (filter.minPrice || filter.maxPrice) {
     filter.price = {};
     if (filter.minPrice && filter.maxPrice) {
-      filter.price = { $gte: filter.minPrice, $lte: filter.maxPrice };
+      filter.price = { $gte: Number(filter.minPrice), $lte: Number(filter.maxPrice) };
     } else if (filter.minPrice) {
-      filter.price = { $gte: filter.minPrice };
+      filter.price = { $gte: Number(filter.minPrice) };
     } else if (filter.maxPrice) {
-      filter.price = { $lte: filter.maxPrice };
+      filter.price = { $lte: Number(filter.maxPrice) };
     }
     delete filter.minPrice;
     delete filter.maxPrice;
@@ -35,26 +46,98 @@ const queryGigs = async (filter, options, { excludeUserId } = {}) => {
     { path: "categoriesId" },
   ];
 
-  const query = {};
+  // Seller-side filters: language / country / online / verified / level
+  // / minRating get resolved against the User collection first, then
+  // we constrain the gig query by userId. Keeps the join cheap for
+  // typical seller counts and lets us reuse the existing paginator.
+  const sellerFilter = {};
+  if (filter.language) {
+    sellerFilter.language = { $regex: `^${escapeRegex(filter.language)}$`, $options: "i" };
+  }
+  if (filter.country) {
+    sellerFilter.location = { $regex: escapeRegex(filter.country), $options: "i" };
+  }
+  if (filter.online === "true" || filter.online === true) {
+    sellerFilter.online = true;
+  }
+  if (filter.verifiedOnly === "true" || filter.verifiedOnly === true) {
+    sellerFilter.isVerified = true;
+  }
+  if (filter.minRating) {
+    sellerFilter["review.rating"] = { $gte: Number(filter.minRating) };
+  }
+  if (filter.level && LEVEL_RULES[filter.level]) {
+    const rule = LEVEL_RULES[filter.level];
+    if (rule.minRating != null) {
+      sellerFilter["review.rating"] = {
+        ...(sellerFilter["review.rating"] || {}),
+        $gte: rule.minRating,
+      };
+    }
+    if (rule.minReviews != null) {
+      sellerFilter["review.total"] = {
+        ...(sellerFilter["review.total"] || {}),
+        $gte: rule.minReviews,
+      };
+    }
+    if (rule.maxReviews != null) {
+      sellerFilter["review.total"] = {
+        ...(sellerFilter["review.total"] || {}),
+        $lte: rule.maxReviews,
+      };
+    }
+    if (rule.verifiedOnly) sellerFilter.isVerified = true;
+  }
 
-  // Loop through each filter field and add conditions if they exist
+  const query = {};
+  if (Object.keys(sellerFilter).length > 0) {
+    const matchingSellers = await User.find(sellerFilter, { _id: 1 }).lean();
+    const ids = matchingSellers.map((u) => u._id);
+    // No matching sellers → short-circuit to an empty result.
+    if (ids.length === 0) {
+      return { results: [], page: 1, limit: Number(options.limit) || 10, totalPages: 0, totalResults: 0 };
+    }
+    query.userId = { $in: ids };
+  }
+
+  // Loop through remaining gig-level fields
+  const seller = ["language", "country", "online", "verifiedOnly", "minRating", "level"];
   for (const key of Object.keys(filter)) {
+    if (seller.includes(key)) continue;
     if (key === "title" && filter[key] !== "") {
       query[key] = { $regex: filter[key], $options: "i" };
     } else if (key === "categories") {
       query["categoriesId"] = filter[key];
-    } else if (filter[key] !== "") {
+    } else if (key === "delivery" && filter[key]) {
+      // Any of the gig's packages can deliver within N days. Falls
+      // back to "Anytime" when the param is missing or 0.
+      const maxDays = Number(filter[key]);
+      if (maxDays > 0) {
+        query.package = { $elemMatch: { deliveryDate: { $lte: maxDays } } };
+      }
+    } else if (filter[key] !== "" && filter[key] != null) {
       query[key] = filter[key];
     }
   }
 
   if (excludeUserId) {
-    query.userId = { $ne: excludeUserId };
+    if (query.userId && query.userId.$in) {
+      query.userId = {
+        ...query.userId,
+        $nin: [excludeUserId],
+      };
+    } else {
+      query.userId = { $ne: excludeUserId };
+    }
   }
 
   const gigs = await Gig.paginate(query, options);
   return gigs;
 };
+
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 
 

@@ -18,6 +18,8 @@ const orderMessageSchema = mongoose.Schema(
           "unknown",
           "text",
           "deliveryMessage",
+          "extensionRequest",
+          "extensionResponse",
         ],
         required: false,
       },
@@ -29,6 +31,15 @@ const orderMessageSchema = mongoose.Schema(
         },
       ],
       deliveryDetails: {
+        type: Object,
+        required: false,
+        default: {},
+      },
+      // Free-form payload for extensionRequest / extensionResponse
+      // system messages. Carries the new delivery date, reason, and
+      // current status so the chat bubble can render Accept/Decline
+      // without a second round-trip.
+      extensionDetails: {
         type: Object,
         required: false,
         default: {},

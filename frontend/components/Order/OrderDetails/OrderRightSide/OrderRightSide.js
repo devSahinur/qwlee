@@ -20,13 +20,14 @@ import { IoTimeOutline, IoAlertCircle, IoCheckmarkCircle } from "react-icons/io5
 import {
   useGetBuyerOrderDetailsQuery,
   useUpdateBuyerOrderStatusMutation,
+  useRespondOrderExtensionMutation,
 } from "@/app/redux/features/order/buyerOrderApi";
 import { useSendOrderMessageMutation } from "@/app/redux/features/orderMessage/orderMessage.api";
 import { useGetReviewByOrderQuery } from "@/app/redux/features/reviewsApi";
 import DeliverNowModal from "./DeliveryModal";
 import ExtendDeliveryDateModal from "./ExtendDeliveryDateModal";
 import LeaveReviewModal from "./LeaveReviewModal";
-import { IoStar } from "react-icons/io5";
+import { IoStar, IoCalendarOutline } from "react-icons/io5";
 
 export default function OrderActions({ order, orderId, isSeller }) {
   const router = useRouter();
@@ -42,6 +43,11 @@ export default function OrderActions({ order, orderId, isSeller }) {
   const { data: myReview } = useGetReviewByOrderQuery(orderId, {
     skip: !orderId || isSeller,
   });
+
+  const [respondExtension, { isLoading: extLoading }] =
+    useRespondOrderExtensionMutation();
+  const extension = order?.extensionRequest;
+  const extensionPending = extension?.status === "pending";
 
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [isLate, setIsLate] = useState(false);
@@ -104,6 +110,17 @@ export default function OrderActions({ order, orderId, isSeller }) {
     else toast.success("Order cancelled");
   }
 
+  async function handleExtensionResponse(action) {
+    const res = await respondExtension({ orderId, action });
+    if (res?.error) {
+      toast.error(res.error?.data?.message || "Couldn't respond");
+      return;
+    }
+    toast.success(
+      action === "accept" ? "Extension accepted" : "Extension declined"
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Countdown — sellers only, while in-flight */}
@@ -127,9 +144,10 @@ export default function OrderActions({ order, orderId, isSeller }) {
           <button
             type="button"
             onClick={() => setExtendOpen(true)}
-            className="mt-2 w-full text-center text-sm font-medium text-gray-600 hover:text-gray-900"
+            disabled={extensionPending}
+            className="mt-2 w-full text-center text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Extend delivery date
+            {extensionPending ? "Extension pending…" : "Extend delivery date"}
           </button>
         </section>
       )}
@@ -153,6 +171,55 @@ export default function OrderActions({ order, orderId, isSeller }) {
         <section className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-center">
           <IoAlertCircle className="text-gray-500 w-7 h-7 mx-auto" />
           <h3 className="text-sm font-semibold text-gray-800 mt-1">Order cancelled</h3>
+        </section>
+      )}
+
+      {/* Pending extension card — both parties see the request, but
+          only the buyer gets Accept/Decline. */}
+      {extensionPending && (
+        <section className="bg-amber-50/60 border border-amber-200 rounded-2xl p-5">
+          <div className="flex items-center gap-2">
+            <IoCalendarOutline className="text-amber-600" />
+            <h3 className="text-sm font-semibold text-amber-900">
+              Extension requested
+            </h3>
+          </div>
+          <p className="text-xs text-amber-800 mt-2">
+            New delivery date:{" "}
+            <strong>
+              {moment(extension.newDeliveryDate).format("D MMM YYYY")}
+            </strong>
+          </p>
+          {extension.reason ? (
+            <p className="text-xs text-amber-800/90 mt-1.5 leading-relaxed line-clamp-4">
+              “{extension.reason}”
+            </p>
+          ) : null}
+
+          {!isSeller ? (
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                type="button"
+                disabled={extLoading}
+                onClick={() => handleExtensionResponse("accept")}
+                className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
+              >
+                Accept
+              </button>
+              <button
+                type="button"
+                disabled={extLoading}
+                onClick={() => handleExtensionResponse("decline")}
+                className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold border border-amber-300 text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+              >
+                Decline
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-amber-700/80 mt-3 italic">
+              Waiting for the buyer to respond…
+            </p>
+          )}
         </section>
       )}
 
@@ -258,8 +325,8 @@ export default function OrderActions({ order, orderId, isSeller }) {
       <ExtendDeliveryDateModal
         isOpen={extendOpen}
         onClose={() => setExtendOpen(false)}
-        onSubmit={async () => setExtendOpen(false)}
-        originalDeliveryDate={formattedDelivery}
+        orderId={orderId}
+        originalDeliveryDate={order?.deliveryDate}
       />
       <LeaveReviewModal
         open={reviewOpen}

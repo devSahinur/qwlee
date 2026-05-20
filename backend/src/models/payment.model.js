@@ -43,6 +43,22 @@ const ordersSchema = mongoose.Schema(
     deliveryDate: {
       type: Date,
     },
+    // Seller-initiated delivery-date extension. Fiverr-style: seller
+    // requests a new date with a reason → buyer accepts (date moves,
+    // status reset to active) or declines (request marked declined,
+    // original date stays). `status === "none"` means no current
+    // request — keeps the field self-describing for the UI.
+    extensionRequest: {
+      newDeliveryDate: { type: Date, default: null },
+      reason: { type: String, default: "" },
+      status: {
+        type: String,
+        enum: ["none", "pending", "accepted", "declined"],
+        default: "none",
+      },
+      requestedAt: { type: Date, default: null },
+      respondedAt: { type: Date, default: null },
+    },
     isDeleted: {
       type: Boolean,
       default: false,

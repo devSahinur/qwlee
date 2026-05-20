@@ -23,6 +23,8 @@ import { useGetAllCategoryQuery } from "@/app/redux/features/getAllCategoryApi";
 import AllCard from "./AllCard";
 import AllCardTopFilters from "./AllCardTopFilters";
 import GigCardSkeleton from "./GigCardSkeleton";
+import FilterBar from "./FilterBar";
+import ActiveFilterChips from "./ActiveFilterChips";
 import trackSearch from "@/utils/trackSearch";
 
 const LIMIT = 12;
@@ -36,6 +38,13 @@ function GigContent() {
   const maxPrice = params.get("maxPrice");
   const title = params.get("title") || "";
   const sortBy = params.get("sortBy") || undefined;
+  const delivery = params.get("delivery") || undefined;
+  const language = params.get("language") || undefined;
+  const country = params.get("country") || undefined;
+  const onlineOnly = params.get("online") === "true";
+  const verifiedOnly = params.get("verifiedOnly") === "true";
+  const minRating = params.get("minRating") || undefined;
+  const level = params.get("level") || undefined;
 
   const [searchInput, setSearchInput] = useState(title);
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,6 +91,13 @@ function GigContent() {
     maxPrice,
     search: title || undefined,
     sortBy,
+    delivery,
+    language,
+    country,
+    online: onlineOnly,
+    verifiedOnly,
+    minRating,
+    level,
     limit: LIMIT,
     page: currentPage,
   });
@@ -150,6 +166,8 @@ function GigContent() {
 
       {/* Results — full width, no sidebar */}
       <section className="container mx-auto px-4 py-8 md:py-10">
+        <FilterBar />
+        <ActiveFilterChips />
         <AllCardTopFilters totalResults={total} />
 
         {isFetching && gigs.length === 0 ? (

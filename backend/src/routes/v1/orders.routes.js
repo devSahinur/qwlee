@@ -27,12 +27,16 @@ router
   .route("/")
   .patch(auth("withOutAdmin"), ordersController.orderModify)
   .get(auth("withOutAdmin"), ordersController.getMyOrders);
+// Delivery-date extension flow. Seller POSTs to request, buyer PATCHes
+// to accept/decline. Auth is wide ("common") on PATCH because the buyer
+// may be in either role mode when responding.
 router
-.route("/:orderId")
-.get(auth("withOutAdmin"), ordersController.getOrderById)
-// router
-//   .route("/:orderId")
-//   .get(categoriesController.getCategory)
-//   .delete(auth("admin"), categoriesController.deleteCategory);
+  .route("/:orderId/extension")
+  .post(auth("freelancer"), ordersController.requestExtension)
+  .patch(auth("common"), ordersController.respondExtension);
+
+router
+  .route("/:orderId")
+  .get(auth("withOutAdmin"), ordersController.getOrderById);
 
 module.exports = router;
